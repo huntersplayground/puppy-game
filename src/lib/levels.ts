@@ -124,7 +124,7 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
   {
     levelNumber: 5,
     name: 'Cloud Playground',
-    subtitle: 'The Ultimate Challenge! Catch golden balls to win!',
+    subtitle: 'The Ultimate Challenge! Golden balls are worth big bonus points!',
     targetFloors: 35,
     scrollSpeed: 1.85,
     platformWidthMin: 85,

@@ -66,7 +66,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         </h2>
         <p className={`text-sm font-semibold mb-4 ${isVictory ? 'text-amber-300' : 'text-slate-400'}`}>
           {isVictory
-            ? 'You descended all 5 Levels & caught the Golden Bone!'
+            ? 'You guided your puppy through all 5 levels—what a ball-chasing champion!'
             : `Great try on Level ${currentLevel}: ${levelConfig.name}!`}
         </p>
 
