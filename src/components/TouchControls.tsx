@@ -17,7 +17,6 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
 }) => {
   const [leftPressed, setLeftPressed] = useState(false);
   const [rightPressed, setRightPressed] = useState(false);
-  const [hasOrientationPermission, setHasOrientationPermission] = useState<boolean | null>(null);
 
   // Handle device orientation gyro for iPhone
   useEffect(() => {
@@ -65,10 +64,8 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
       try {
         const response = await DOEvent.requestPermission();
         if (response === 'granted') {
-          setHasOrientationPermission(true);
           onTiltToggle(!tiltEnabled);
         } else {
-          setHasOrientationPermission(false);
           alert('Gyroscope permission was denied. Please use the on-screen buttons to control your puppy!');
         }
       } catch (err) {
@@ -119,8 +116,6 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
         onPointerUp={handleLeftEnd}
         onPointerLeave={handleLeftEnd}
         onPointerCancel={handleLeftEnd}
-        onTouchStart={handleLeftStart}
-        onTouchEnd={handleLeftEnd}
         className={`flex-1 h-16 sm:h-20 rounded-2xl flex items-center justify-center gap-2 font-bold text-base transition-all duration-100 shadow-md border-2 ${
           leftPressed
             ? 'bg-amber-500 text-slate-950 border-amber-300 scale-95 shadow-inner'
@@ -160,8 +155,6 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
         onPointerUp={handleRightEnd}
         onPointerLeave={handleRightEnd}
         onPointerCancel={handleRightEnd}
-        onTouchStart={handleRightStart}
-        onTouchEnd={handleRightEnd}
         className={`flex-1 h-16 sm:h-20 rounded-2xl flex items-center justify-center gap-2 font-bold text-base transition-all duration-100 shadow-md border-2 ${
           rightPressed
             ? 'bg-amber-500 text-slate-950 border-amber-300 scale-95 shadow-inner'

@@ -74,6 +74,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const lastSpawnYRef = useRef<number>(VIRTUAL_HEIGHT);
   const keysRef = useRef<{ [key: string]: boolean }>({});
   const isPausedRef = useRef(isPaused);
+  const moveLeftPressedRef = useRef(moveLeftPressed);
+  const moveRightPressedRef = useRef(moveRightPressed);
   const heartsRef = useRef(hearts);
   const hasTriggeredClearRef = useRef(false);
   const introTimerRef = useRef(220);
@@ -82,6 +84,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
+
+  useEffect(() => {
+    moveLeftPressedRef.current = moveLeftPressed;
+  }, [moveLeftPressed]);
+
+  useEffect(() => {
+    moveRightPressedRef.current = moveRightPressed;
+  }, [moveRightPressed]);
 
   useEffect(() => {
     heartsRef.current = hearts;
@@ -227,11 +237,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const handleKeyUp = (e: KeyboardEvent) => {
       keysRef.current[e.key.toLowerCase()] = false;
     };
+    const handleWindowBlur = () => {
+      keysRef.current = {};
+    };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleWindowBlur);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleWindowBlur);
     };
   }, []);
 
@@ -283,12 +298,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       // 1. Check controls (Touch buttons + Keyboard arrows)
       const moveLeft =
-        moveLeftPressed ||
+        moveLeftPressedRef.current ||
         keysRef.current['arrowleft'] ||
         keysRef.current['a'] ||
         false;
       const moveRight =
-        moveRightPressed ||
+        moveRightPressedRef.current ||
         keysRef.current['arrowright'] ||
         keysRef.current['d'] ||
         false;
@@ -1022,8 +1037,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     generatePlatform,
     levelConfig,
     maxHearts,
-    moveLeftPressed,
-    moveRightPressed,
     onBallCaught,
     onFloorChange,
     onGameOver,

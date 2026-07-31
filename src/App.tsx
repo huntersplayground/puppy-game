@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getLevelConfig } from './lib/levels';
 import { sound } from './lib/sound';
-import { getSaveData, recordGameEnd } from './lib/storage';
+import { getSaveData, recordGameEnd, updateSaveData } from './lib/storage';
 import { HeaderBar } from './components/HeaderBar';
 import { TouchControls } from './components/TouchControls';
 import { GameCanvas } from './components/GameCanvas';
@@ -30,9 +30,9 @@ export default function App() {
   // Controls state
   const [moveLeftPressed, setMoveLeftPressed] = useState<boolean>(false);
   const [moveRightPressed, setMoveRightPressed] = useState<boolean>(false);
-  const [tiltEnabled, setTiltEnabled] = useState<boolean>(false);
+  const [tiltEnabled, setTiltEnabled] = useState<boolean>(() => getSaveData().tiltEnabled);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(() => getSaveData().soundMuted);
 
   // Modals
   const [showLevelClear, setShowLevelClear] = useState<boolean>(false);
@@ -41,10 +41,22 @@ export default function App() {
   const [showLevelSelect, setShowLevelSelect] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
 
+  // Keep event handlers used by the animation loop stable while still giving
+  // them immediate access to the latest session totals.
+  const currentLevelRef = useRef(currentLevelNumber);
+  const scoreRef = useRef(score);
+  const ballsCaughtRef = useRef(ballsCaught);
+  const floorCountRef = useRef(floorCount);
+  const saveDataRef = useRef(saveData);
+
   const levelConfig = getLevelConfig(currentLevelNumber);
 
   // Reset session when starting or replaying a level
-  const restartLevel = useCallback((levelNum: number = currentLevelNumber) => {
+  const restartLevel = useCallback((levelNum: number) => {
+    currentLevelRef.current = levelNum;
+    scoreRef.current = 0;
+    ballsCaughtRef.current = 0;
+    floorCountRef.current = 0;
     setCurrentLevelNumber(levelNum);
     setScore(0);
     setBallsCaught(0);
@@ -54,52 +66,76 @@ export default function App() {
     setShowLevelClear(false);
     setShowGameOver(false);
     setIsVictory(false);
-  }, [currentLevelNumber]);
+  }, []);
+
+  const handleFloorChange = useCallback((floor: number) => {
+    floorCountRef.current = floor;
+    setFloorCount(floor);
+  }, []);
+
+  const handleScoreChange = useCallback((delta: number) => {
+    scoreRef.current += delta;
+    setScore(scoreRef.current);
+  }, []);
+
+  const handleBallCaught = useCallback(() => {
+    ballsCaughtRef.current += 1;
+    setBallsCaught(ballsCaughtRef.current);
+  }, []);
+
+  const handleHeartChange = useCallback((newHearts: number) => {
+    setHearts(newHearts);
+  }, []);
 
   // Level clear handler
   const handleLevelClear = useCallback(() => {
-    const clearedConfig = getLevelConfig(currentLevelNumber);
+    const clearedLevel = currentLevelRef.current;
+    const clearedConfig = getLevelConfig(clearedLevel);
+    const currentSave = saveDataRef.current;
     const newSave = recordGameEnd(
       {
-        score,
-        currentLevel: currentLevelNumber,
+        score: scoreRef.current,
+        currentLevel: clearedLevel,
         floorCount: clearedConfig.targetFloors,
-        ballsCaught,
-        highScore: saveData.highScore,
-        bestLevel: saveData.bestLevel,
-        totalBallsEver: saveData.totalBallsEver,
+        ballsCaught: ballsCaughtRef.current,
+        highScore: currentSave.highScore,
+        bestLevel: currentSave.bestLevel,
+        totalBallsEver: currentSave.totalBallsEver,
       },
       true
     );
+    saveDataRef.current = newSave;
     setSaveData(newSave);
 
-    if (currentLevelNumber >= 5) {
+    if (clearedLevel >= 5) {
       // Beating level 5 is Ultimate Champion Victory!
       setIsVictory(true);
       setShowGameOver(true);
     } else {
       setShowLevelClear(true);
     }
-  }, [currentLevelNumber, score, ballsCaught, saveData]);
+  }, []);
 
   // Game over handler (out of hearts)
   const handleGameOver = useCallback(() => {
+    const currentSave = saveDataRef.current;
     const newSave = recordGameEnd(
       {
-        score,
-        currentLevel: currentLevelNumber,
-        floorCount,
-        ballsCaught,
-        highScore: saveData.highScore,
-        bestLevel: saveData.bestLevel,
-        totalBallsEver: saveData.totalBallsEver,
+        score: scoreRef.current,
+        currentLevel: currentLevelRef.current,
+        floorCount: floorCountRef.current,
+        ballsCaught: ballsCaughtRef.current,
+        highScore: currentSave.highScore,
+        bestLevel: currentSave.bestLevel,
+        totalBallsEver: currentSave.totalBallsEver,
       },
       false
     );
+    saveDataRef.current = newSave;
     setSaveData(newSave);
     setIsVictory(false);
     setShowGameOver(true);
-  }, [score, currentLevelNumber, floorCount, ballsCaught, saveData]);
+  }, []);
 
   // Handle proceed to next level
   const handleNextLevel = () => {
@@ -108,10 +144,24 @@ export default function App() {
     }
   };
 
-  const handleToggleMute = () => {
+  useEffect(() => {
+    sound.setMuted(isMuted);
+  }, [isMuted]);
+
+  const handleToggleMute = useCallback(() => {
     const muted = sound.toggleMute();
     setIsMuted(muted);
-  };
+    const newSave = updateSaveData({ soundMuted: muted });
+    saveDataRef.current = newSave;
+    setSaveData(newSave);
+  }, []);
+
+  const handleTiltToggle = useCallback((enabled: boolean) => {
+    setTiltEnabled(enabled);
+    const newSave = updateSaveData({ tiltEnabled: enabled });
+    saveDataRef.current = newSave;
+    setSaveData(newSave);
+  }, []);
 
   // Keyboard shortcut for pause / reset
   useEffect(() => {
@@ -156,10 +206,10 @@ export default function App() {
         }
         moveLeftPressed={moveLeftPressed}
         moveRightPressed={moveRightPressed}
-        onFloorChange={(f) => setFloorCount(f)}
-        onScoreChange={(delta) => setScore((s) => s + delta)}
-        onBallCaught={() => setBallsCaught((b) => b + 1)}
-        onHeartChange={(h) => setHearts(h)}
+        onFloorChange={handleFloorChange}
+        onScoreChange={handleScoreChange}
+        onBallCaught={handleBallCaught}
+        onHeartChange={handleHeartChange}
         onLevelClear={handleLevelClear}
         onGameOver={handleGameOver}
         hearts={hearts}
@@ -170,7 +220,7 @@ export default function App() {
       <TouchControls
         onMoveLeft={(pressed) => setMoveLeftPressed(pressed)}
         onMoveRight={(pressed) => setMoveRightPressed(pressed)}
-        onTiltToggle={(enabled) => setTiltEnabled(enabled)}
+        onTiltToggle={handleTiltToggle}
         tiltEnabled={tiltEnabled}
       />
 
