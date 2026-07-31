@@ -1,6 +1,5 @@
 {
-  "name": "Puppy Down: 5 Levels",
-  "description": "An iPhone-friendly responsive NS-Shaft style game where a cute dog descends 5 levels, catches balls for points, and avoids obstacles.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "Puppy Ball Chase",
+  "description": "A cute five-level platform game where a playful puppy chases balls, earns points, and avoids puddles, kitties, and fragile clouds.",
+  "requestFramePermissions": []
 }
