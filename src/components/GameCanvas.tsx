@@ -170,7 +170,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     floorCounterRef.current = 0;
     distanceTravelledRef.current = 0;
     onFloorChange(0);
-    introTimerRef.current = 220; // 3.6s intro banner, never flashes again!
+    introTimerRef.current = 180; // 3 seconds preparation countdown before game starts
 
     const initialPlats: Platform[] = [];
     let currentY = 130;
@@ -274,6 +274,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       if (introTimerRef.current > 0) {
         introTimerRef.current--;
+        return; // Pause all game movement and scrolling while the preparation banner is shown
       }
 
       const player = playerRef.current;
@@ -927,46 +928,53 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.restore();
       }
 
-      // 7. Smooth non-flashing Level Intro Overlay
+      // 7. Smooth non-flashing Level Intro Overlay (Preparation Banner)
       if (introTimerRef.current > 0) {
         ctx.save();
         const alpha = Math.min(1, introTimerRef.current / 30);
         ctx.globalAlpha = alpha;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
         ctx.beginPath();
-        ctx.roundRect(20, VIRTUAL_HEIGHT / 2 - 60, VIRTUAL_WIDTH - 40, 120, 16);
+        ctx.roundRect(20, VIRTUAL_HEIGHT / 2 - 68, VIRTUAL_WIDTH - 40, 136, 16);
         ctx.fill();
 
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 16px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(
-          `Level ${levelConfig.levelNumber}: ${levelConfig.name}`,
+          `Level ${levelConfig.levelNumber}`,
           VIRTUAL_WIDTH / 2,
-          VIRTUAL_HEIGHT / 2 - 32
+          VIRTUAL_HEIGHT / 2 - 34
         );
 
-        ctx.font = 'bold 13px sans-serif';
+        ctx.font = 'bold 14px sans-serif';
         ctx.fillStyle = '#38bdf8';
         ctx.fillText(
-          'Use LEFT & RIGHT buttons to Catch Balls!',
+          'Move left & right to catch balls',
           VIRTUAL_WIDTH / 2,
           VIRTUAL_HEIGHT / 2 - 8
         );
 
+        ctx.font = 'bold 13px sans-serif';
         ctx.fillStyle = '#f59e0b';
         ctx.fillText(
-          `GOAL: Descend ${levelConfig.targetFloors} Floors to clear!`,
+          'Descend platforms to see how many',
           VIRTUAL_WIDTH / 2,
-          VIRTUAL_HEIGHT / 2 + 16
+          VIRTUAL_HEIGHT / 2 + 14
+        );
+        ctx.fillText(
+          'floors your puppy can reach!',
+          VIRTUAL_WIDTH / 2,
+          VIRTUAL_HEIGHT / 2 + 32
         );
 
-        ctx.font = '11px sans-serif';
-        ctx.fillStyle = '#cbd5e1';
+        const secondsLeft = Math.ceil(introTimerRef.current / 60);
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = '#94a3b8';
         ctx.fillText(
-          'Stay on platforms! Falling off bottom = -1 HP rescue',
+          `Game starting in ${secondsLeft}...`,
           VIRTUAL_WIDTH / 2,
-          VIRTUAL_HEIGHT / 2 + 38
+          VIRTUAL_HEIGHT / 2 + 54
         );
         ctx.restore();
       }
