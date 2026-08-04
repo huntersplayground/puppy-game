@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { RotateCcw, Trophy, Sparkles, Award, HeartHandshake, Share2 } from 'lucide-react';
+import { RotateCcw, Trophy, Sparkles, Award } from 'lucide-react';
 import { LevelConfig } from '../types';
 
 interface GameOverModalProps {
@@ -12,7 +12,6 @@ interface GameOverModalProps {
   highScore: number;
   levelConfig: LevelConfig;
   onRestart: () => void;
-  onOpenLevelSelect: () => void;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -24,7 +23,6 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   highScore,
   levelConfig,
   onRestart,
-  onOpenLevelSelect,
 }) => {
   useEffect(() => {
     if (isVictory) {
@@ -66,8 +64,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         </h2>
         <p className={`text-sm font-semibold mb-4 ${isVictory ? 'text-amber-300' : 'text-slate-400'}`}>
           {isVictory
-            ? 'You guided your puppy through all 5 levels—what a ball-chasing champion!'
-            : `Great try on Level ${currentLevel}: ${levelConfig.name}!`}
+            ? 'You guided your puppy through all 10 floors—what a ball-chasing champion!'
+            : `Great try on Floor ${floorCount} of the 10-Floor Challenge!`}
         </p>
 
         {isNewHighScore && (
@@ -124,12 +122,6 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             <span>{isVictory ? 'Play Again' : 'Try Again'}</span>
           </button>
 
-          <button
-            onClick={onOpenLevelSelect}
-            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-4 rounded-xl border border-slate-700 flex items-center justify-center gap-2 text-sm transition active:scale-95"
-          >
-            <span>Select Different Level</span>
-          </button>
         </div>
       </div>
     </div>

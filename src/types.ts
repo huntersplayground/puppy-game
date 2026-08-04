@@ -11,7 +11,7 @@ export interface Platform {
   fragileTimer?: number; // starts counting down when dog lands
   isBroken?: boolean;
   bounceOffset?: number; // visual bounce animation
-  obstacleType?: 'puddle' | 'kitty' | 'bush';
+  obstacleType?: 'puddle' | 'kitty' | 'hurdle' | 'weave-poles';
   obstacleX?: number; // relative to platform x
   obstacleWidth?: number;
   hasBall?: boolean;

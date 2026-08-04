@@ -29,6 +29,9 @@ const GRAVITY = 0.45;
 const MAX_FALL_SPEED = 9.5;
 const MOVE_SPEED = 5.2;
 const CEILING_DANGER_Y = 22;
+const GATE_WARNING_Y = 105;
+const SPEED_PER_FLOOR = 0.16;
+const MAX_SCROLL_SPEED = 2.42;
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   levelConfig,
@@ -79,6 +82,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const heartsRef = useRef(hearts);
   const hasTriggeredClearRef = useRef(false);
   const introTimerRef = useRef(220);
+  const gateRattleRef = useRef(0);
 
   // Sync prop changes to refs
   useEffect(() => {
@@ -102,10 +106,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const generatePlatform = useCallback(
     (y: number, isStarting: boolean = false): Platform => {
       const id = 'plat_' + Math.random().toString(36).substring(2, 9);
+      const difficulty = Math.min(
+        1,
+        floorCounterRef.current / Math.max(1, levelConfig.targetFloors - 1)
+      );
       const width = isStarting
         ? 140
         : Math.floor(
-            levelConfig.platformWidthMin +
+            levelConfig.platformWidthMin - difficulty * 20 +
               Math.random() * (levelConfig.platformWidthMax - levelConfig.platformWidthMin)
           );
       const x = Math.floor(16 + Math.random() * (VIRTUAL_WIDTH - width - 32));
@@ -113,14 +121,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       let type: PlatformType = 'normal';
       if (!isStarting) {
         const r = Math.random();
-        const {
-          normal,
-          conveyorLeft,
-          conveyorRight,
-          bounce,
-          fragile,
-          obstacle,
-        } = levelConfig.probabilities;
+        const conveyorLeft = levelConfig.probabilities.conveyorLeft + difficulty * 0.06;
+        const conveyorRight = levelConfig.probabilities.conveyorRight + difficulty * 0.06;
+        const bounce = levelConfig.probabilities.bounce;
+        const fragile = levelConfig.probabilities.fragile + difficulty * 0.08;
+        const obstacle = levelConfig.probabilities.obstacle + difficulty * 0.14;
+        const normal = Math.max(0.2, 1 - conveyorLeft - conveyorRight - bounce - fragile - obstacle);
 
         let accum = normal;
         if (r < accum) type = 'normal';
@@ -133,7 +139,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       // Ball spawn logic
       const hasBall =
-        !isStarting && Math.random() < levelConfig.ballSpawnRate && type !== 'fragile';
+        !isStarting && Math.random() < levelConfig.ballSpawnRate + difficulty * 0.12 && type !== 'fragile';
       let ballType: 'tennis' | 'rubber' | 'golden' | 'heart' = 'tennis';
       if (hasBall) {
         const rBall = Math.random();
@@ -155,12 +161,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         fragileTimer: type === 'fragile' ? 36 : undefined,
         isBroken: false,
         bounceOffset: 0,
-        obstacleType:
-          type === 'obstacle'
-            ? Math.random() < 0.5
-              ? 'puddle'
-              : 'kitty'
-            : undefined,
+        obstacleType: type === 'obstacle'
+          ? (difficulty > 0.45
+              ? (['puddle', 'kitty', 'hurdle', 'weave-poles'] as const)[Math.floor(Math.random() * 4)]
+              : (['puddle', 'kitty'] as const)[Math.floor(Math.random() * 2)])
+          : undefined,
         obstacleX: type === 'obstacle' ? width / 2 - 12 : undefined,
         obstacleWidth: 24,
         hasBall,
@@ -177,6 +182,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   // Initialize level platforms on mount or level change
   const initLevel = useCallback(() => {
     hasTriggeredClearRef.current = false;
+    gateRattleRef.current = 0;
     floorCounterRef.current = 0;
     distanceTravelledRef.current = 0;
     onFloorChange(0);
@@ -294,7 +300,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       const player = playerRef.current;
       const platforms = platformsRef.current;
-      const scrollSpeed = levelConfig.scrollSpeed;
+      const scrollSpeed = Math.min(
+        MAX_SCROLL_SPEED,
+        levelConfig.scrollSpeed + floorCounterRef.current * SPEED_PER_FLOOR
+      );
 
       // 1. Check controls (Touch buttons + Keyboard arrows)
       const moveLeft =
@@ -349,6 +358,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       player.y += player.vy;
+
+      if (player.y < GATE_WARNING_Y) {
+        gateRattleRef.current = Math.min(1, gateRattleRef.current + 0.18);
+      } else {
+        gateRattleRef.current = Math.max(0, gateRattleRef.current - 0.08);
+      }
 
       // 4. Scroll platforms UP
       let lowestPlatformY = 0;
@@ -569,7 +584,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           '#f43f5e',
           8,
           'text',
-          'Cloud Bump! -1 HP'
+          'STOP GATE! -1 HP'
         );
         if (newHearts === 0) {
           sound.gameOver();
@@ -666,13 +681,49 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.fillRect(VIRTUAL_WIDTH - 8, y, 6, 6);
       }
 
-      // 3. Draw Soft Rain Cloud Ceiling Bumper at top
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-      for (let x = 10; x < VIRTUAL_WIDTH - 10; x += 36) {
+      // 3. Draw the rattling dog-agility STOP gate at the danger boundary.
+      const gateShake = gateRattleRef.current * Math.sin(player.stateTimer * 0.9) * 2.5;
+      ctx.save();
+      ctx.translate(gateShake, 0);
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(10, 12, 8, 32);
+      ctx.fillRect(VIRTUAL_WIDTH - 18, 12, 8, 32);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(14, 20, VIRTUAL_WIDTH - 28, 12);
+      ctx.fillStyle = '#1e293b';
+      for (let x = 18; x < VIRTUAL_WIDTH - 18; x += 32) {
         ctx.beginPath();
-        ctx.arc(x + 18, 8, 16, 0, Math.PI * 2);
+        ctx.moveTo(x, 20);
+        ctx.lineTo(x + 12, 20);
+        ctx.lineTo(x - 2, 32);
+        ctx.lineTo(x - 14, 32);
+        ctx.closePath();
         ctx.fill();
       }
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const angle = Math.PI / 8 + (Math.PI / 4) * i;
+        const x = VIRTUAL_WIDTH - 40 + Math.cos(angle) * 18;
+        const y = 52 + Math.sin(angle) * 18;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('STOP', VIRTUAL_WIDTH - 40, 55);
+      if (gateRattleRef.current > 0.1) {
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText('RATTLE!', VIRTUAL_WIDTH / 2, 46);
+      }
+      ctx.restore();
 
       // 4. Draw Platforms
       for (const p of platforms) {
@@ -749,7 +800,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             ctx.beginPath();
             ctx.arc(obsX + 8, p.y - 5, 3, 0, Math.PI * 2);
             ctx.fill();
-          } else {
+          } else if (p.obstacleType === 'kitty') {
             // Grumpy Kitty obstacle
             ctx.fillStyle = '#475569';
             ctx.beginPath();
@@ -770,6 +821,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             ctx.fillStyle = '#fef08a';
             ctx.fillRect(obsX + 8, obsY + 4, 3, 2);
             ctx.fillRect(obsX + 14, obsY + 4, 3, 2);
+          } else if (p.obstacleType === 'hurdle') {
+            // Dog agility hurdle
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(obsX + 2, p.y + 2);
+            ctx.lineTo(obsX + 2, p.y - 15);
+            ctx.moveTo(obsX + 28, p.y + 2);
+            ctx.lineTo(obsX + 28, p.y - 15);
+            ctx.moveTo(obsX + 2, p.y - 9);
+            ctx.lineTo(obsX + 28, p.y - 9);
+            ctx.stroke();
+          } else if (p.obstacleType === 'weave-poles') {
+            // Blue-and-white agility weave poles
+            for (let pole = 0; pole < 3; pole++) {
+              const poleX = obsX + 3 + pole * 10;
+              ctx.fillStyle = '#e2e8f0';
+              ctx.fillRect(poleX, p.y - 17, 4, 18);
+              ctx.fillStyle = '#3b82f6';
+              ctx.fillRect(poleX, p.y - 14, 4, 5);
+              ctx.fillRect(poleX, p.y - 4, 4, 5);
+            }
           }
         }
 
@@ -957,7 +1030,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(
-          `Level ${levelConfig.levelNumber}`,
+          '10-Floor Challenge',
           VIRTUAL_WIDTH / 2,
           VIRTUAL_HEIGHT / 2 - 34
         );
@@ -973,12 +1046,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.font = 'bold 13px sans-serif';
         ctx.fillStyle = '#f59e0b';
         ctx.fillText(
-          'Descend platforms to see how many',
+          'Every floor gets faster—stay below',
           VIRTUAL_WIDTH / 2,
           VIRTUAL_HEIGHT / 2 + 14
         );
         ctx.fillText(
-          'floors your puppy can reach!',
+          'the STOP gate and chase the balls!',
           VIRTUAL_WIDTH / 2,
           VIRTUAL_HEIGHT / 2 + 32
         );
@@ -994,26 +1067,30 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.restore();
       }
 
-      // 8. Draw Level Goal Progress Bar at top of canvas
+      // 8. Draw compact floor and speed progress below the STOP gate.
       ctx.save();
       ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
       ctx.beginPath();
-      ctx.roundRect(VIRTUAL_WIDTH / 2 - 85, 8, 170, 20, 10);
+      ctx.roundRect(VIRTUAL_WIDTH / 2 - 85, 58, 170, 20, 10);
       ctx.fill();
 
       const progressRatio = Math.min(1, floorCounterRef.current / levelConfig.targetFloors);
       ctx.fillStyle = '#10b981'; // Emerald green progress fill
       ctx.beginPath();
-      ctx.roundRect(VIRTUAL_WIDTH / 2 - 83, 10, 166 * progressRatio, 16, 8);
+      ctx.roundRect(VIRTUAL_WIDTH / 2 - 83, 60, 166 * progressRatio, 16, 8);
       ctx.fill();
 
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
+      const activeSpeed = Math.min(
+        MAX_SCROLL_SPEED,
+        levelConfig.scrollSpeed + floorCounterRef.current * SPEED_PER_FLOOR
+      );
       ctx.fillText(
-        `Goal: ${floorCounterRef.current}/${levelConfig.targetFloors} Floors to Clear`,
+        `FLOOR ${floorCounterRef.current}/${levelConfig.targetFloors} • SPEED ${activeSpeed.toFixed(2)}`,
         VIRTUAL_WIDTH / 2,
-        22
+        72
       );
       ctx.restore();
     };

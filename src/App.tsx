@@ -10,9 +10,7 @@ import { getSaveData, recordGameEnd, updateSaveData } from './lib/storage';
 import { HeaderBar } from './components/HeaderBar';
 import { TouchControls } from './components/TouchControls';
 import { GameCanvas } from './components/GameCanvas';
-import { LevelClearModal } from './components/LevelClearModal';
 import { GameOverModal } from './components/GameOverModal';
-import { LevelSelectModal } from './components/LevelSelectModal';
 import { HowToPlayModal } from './components/HowToPlayModal';
 
 export default function App() {
@@ -35,10 +33,8 @@ export default function App() {
   const [isMuted, setIsMuted] = useState<boolean>(() => getSaveData().soundMuted);
 
   // Modals
-  const [showLevelClear, setShowLevelClear] = useState<boolean>(false);
   const [showGameOver, setShowGameOver] = useState<boolean>(false);
   const [isVictory, setIsVictory] = useState<boolean>(false);
-  const [showLevelSelect, setShowLevelSelect] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
 
   // Keep event handlers used by the animation loop stable while still giving
@@ -63,7 +59,6 @@ export default function App() {
     setFloorCount(0);
     setHearts(maxHearts);
     setIsPaused(false);
-    setShowLevelClear(false);
     setShowGameOver(false);
     setIsVictory(false);
   }, []);
@@ -107,13 +102,8 @@ export default function App() {
     saveDataRef.current = newSave;
     setSaveData(newSave);
 
-    if (clearedLevel >= 5) {
-      // Beating level 5 is Ultimate Champion Victory!
-      setIsVictory(true);
-      setShowGameOver(true);
-    } else {
-      setShowLevelClear(true);
-    }
+    setIsVictory(true);
+    setShowGameOver(true);
   }, []);
 
   // Game over handler (out of hearts)
@@ -136,13 +126,6 @@ export default function App() {
     setIsVictory(false);
     setShowGameOver(true);
   }, []);
-
-  // Handle proceed to next level
-  const handleNextLevel = () => {
-    if (currentLevelNumber < 5) {
-      restartLevel(currentLevelNumber + 1);
-    }
-  };
 
   useEffect(() => {
     sound.setMuted(isMuted);
@@ -188,10 +171,6 @@ export default function App() {
         isMuted={isMuted}
         onTogglePause={() => setIsPaused((prev) => !prev)}
         onToggleMute={handleToggleMute}
-        onOpenLevelSelect={() => {
-          setIsPaused(true);
-          setShowLevelSelect(true);
-        }}
         onOpenHelp={() => {
           setIsPaused(true);
           setShowHelp(true);
@@ -202,7 +181,7 @@ export default function App() {
       <GameCanvas
         levelConfig={levelConfig}
         isPaused={
-          isPaused || showLevelClear || showGameOver || showLevelSelect || showHelp
+          isPaused || showGameOver || showHelp
         }
         moveLeftPressed={moveLeftPressed}
         moveRightPressed={moveRightPressed}
@@ -225,16 +204,6 @@ export default function App() {
       />
 
       {/* --- Modals --- */}
-      {showLevelClear && (
-        <LevelClearModal
-          levelConfig={levelConfig}
-          score={score}
-          ballsCaught={ballsCaught}
-          onNextLevel={handleNextLevel}
-          onReplayLevel={() => restartLevel(currentLevelNumber)}
-        />
-      )}
-
       {showGameOver && (
         <GameOverModal
           isVictory={isVictory}
@@ -245,26 +214,6 @@ export default function App() {
           highScore={saveData.highScore}
           levelConfig={levelConfig}
           onRestart={() => restartLevel(currentLevelNumber)}
-          onOpenLevelSelect={() => {
-            setShowGameOver(false);
-            setShowLevelSelect(true);
-          }}
-        />
-      )}
-
-      {showLevelSelect && (
-        <LevelSelectModal
-          currentLevelNumber={currentLevelNumber}
-          unlockedLevels={saveData.unlockedLevels}
-          levelHighScores={saveData.levelHighScores}
-          onSelectLevel={(levelNum) => {
-            setShowLevelSelect(false);
-            restartLevel(levelNum);
-          }}
-          onClose={() => {
-            setShowLevelSelect(false);
-            setIsPaused(false);
-          }}
         />
       )}
 

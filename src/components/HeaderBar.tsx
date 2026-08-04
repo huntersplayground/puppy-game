@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Pause, Play, HelpCircle, Trophy, Sparkles, Heart } from 'lucide-react';
+import { Volume2, VolumeX, Pause, Play, HelpCircle, Flag, Sparkles, Heart } from 'lucide-react';
 import { LevelConfig } from '../types';
 
 interface HeaderBarProps {
@@ -13,7 +13,6 @@ interface HeaderBarProps {
   isMuted: boolean;
   onTogglePause: () => void;
   onToggleMute: () => void;
-  onOpenLevelSelect: () => void;
   onOpenHelp: () => void;
 }
 
@@ -28,7 +27,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   isMuted,
   onTogglePause,
   onToggleMute,
-  onOpenLevelSelect,
   onOpenHelp,
 }) => {
   const progressPercent = Math.min(100, Math.round((floorCount / levelConfig.targetFloors) * 100));
@@ -37,14 +35,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     <div className="w-full bg-slate-900/90 backdrop-blur-md text-white px-3 py-2 border-b border-slate-700/60 shadow-lg select-none z-20">
       {/* Top Row: Level Indicator & Action Buttons */}
       <div className="flex items-center justify-between mb-1.5">
-        <button
-          onClick={onOpenLevelSelect}
-          className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-2.5 py-1 rounded-full text-xs shadow-sm transition active:scale-95"
-          title="Select Level"
-        >
-          <Trophy className="w-3.5 h-3.5 text-slate-950" />
-          <span>Lvl {levelConfig.levelNumber}/5: {levelConfig.name.split(' ')[0]}</span>
-        </button>
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold px-2.5 py-1 rounded-full text-xs shadow-sm">
+          <Flag className="w-3.5 h-3.5" />
+          <span>10-Floor Challenge</span>
+        </div>
 
         <div className="flex items-center gap-1">
           {/* Mute Button */}
@@ -116,8 +110,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         />
       </div>
       <div className="flex justify-between text-[10px] text-slate-400 mt-0.5 font-mono">
-        <span>Floor {floorCount}</span>
-        <span>Target: {levelConfig.targetFloors} Floors</span>
+        <span>Floor {floorCount} / {levelConfig.targetFloors}</span>
+        <span>Speeds up every floor</span>
       </div>
     </div>
   );
