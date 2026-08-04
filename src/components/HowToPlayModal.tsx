@@ -32,7 +32,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose }) => {
               Tribute to NS-Shaft / 《是男人就下100层》
             </p>
             <p className="text-slate-300 leading-relaxed">
-              Inspired by the classic 1990s Japanese game by NAGI-P SOFT and popular 4399 web games! This cute remix is a 10-floor puppy challenge: chase balls for points, dodge agility obstacles, and stay below the STOP gate.
+              Inspired by the classic 1990s Japanese game by NAGI-P SOFT and popular 4399 web games! This cute remix has five dog-agility courses: chase balls for points, dodge obstacles, and stay below the dog gate.
             </p>
           </div>
 

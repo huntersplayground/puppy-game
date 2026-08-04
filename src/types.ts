@@ -61,6 +61,7 @@ export interface LevelConfig {
   name: string;
   subtitle: string;
   targetFloors: number;
+  durationSeconds: number;
   scrollSpeed: number; // pixels per frame at 60fps
   platformWidthMin: number;
   platformWidthMax: number;

@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { getLevelConfig } from './lib/levels';
+import { getLevelConfig, LEVEL_CONFIGS } from './lib/levels';
 import { sound } from './lib/sound';
 import { getSaveData, recordGameEnd, updateSaveData } from './lib/storage';
 import { HeaderBar } from './components/HeaderBar';
 import { TouchControls } from './components/TouchControls';
 import { GameCanvas } from './components/GameCanvas';
+import { LevelClearModal } from './components/LevelClearModal';
 import { GameOverModal } from './components/GameOverModal';
 import { HowToPlayModal } from './components/HowToPlayModal';
 
@@ -21,7 +22,7 @@ export default function App() {
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(1);
   const [score, setScore] = useState<number>(0);
   const [ballsCaught, setBallsCaught] = useState<number>(0);
-  const [floorCount, setFloorCount] = useState<number>(0);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [hearts, setHearts] = useState<number>(5);
   const maxHearts = 5;
 
@@ -33,6 +34,7 @@ export default function App() {
   const [isMuted, setIsMuted] = useState<boolean>(() => getSaveData().soundMuted);
 
   // Modals
+  const [showLevelClear, setShowLevelClear] = useState<boolean>(false);
   const [showGameOver, setShowGameOver] = useState<boolean>(false);
   const [isVictory, setIsVictory] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
@@ -42,7 +44,7 @@ export default function App() {
   const currentLevelRef = useRef(currentLevelNumber);
   const scoreRef = useRef(score);
   const ballsCaughtRef = useRef(ballsCaught);
-  const floorCountRef = useRef(floorCount);
+  const timeRemainingRef = useRef(timeRemaining);
   const saveDataRef = useRef(saveData);
 
   const levelConfig = getLevelConfig(currentLevelNumber);
@@ -52,20 +54,21 @@ export default function App() {
     currentLevelRef.current = levelNum;
     scoreRef.current = 0;
     ballsCaughtRef.current = 0;
-    floorCountRef.current = 0;
+    timeRemainingRef.current = getLevelConfig(levelNum).durationSeconds;
     setCurrentLevelNumber(levelNum);
     setScore(0);
     setBallsCaught(0);
-    setFloorCount(0);
+    setTimeRemaining(getLevelConfig(levelNum).durationSeconds);
     setHearts(maxHearts);
     setIsPaused(false);
+    setShowLevelClear(false);
     setShowGameOver(false);
     setIsVictory(false);
   }, []);
 
-  const handleFloorChange = useCallback((floor: number) => {
-    floorCountRef.current = floor;
-    setFloorCount(floor);
+  const handleTimeChange = useCallback((seconds: number) => {
+    timeRemainingRef.current = seconds;
+    setTimeRemaining(seconds);
   }, []);
 
   const handleScoreChange = useCallback((delta: number) => {
@@ -91,7 +94,7 @@ export default function App() {
       {
         score: scoreRef.current,
         currentLevel: clearedLevel,
-        floorCount: clearedConfig.targetFloors,
+        floorCount: clearedConfig.durationSeconds - timeRemainingRef.current,
         ballsCaught: ballsCaughtRef.current,
         highScore: currentSave.highScore,
         bestLevel: currentSave.bestLevel,
@@ -102,8 +105,12 @@ export default function App() {
     saveDataRef.current = newSave;
     setSaveData(newSave);
 
-    setIsVictory(true);
-    setShowGameOver(true);
+    if (clearedLevel >= LEVEL_CONFIGS.length) {
+      setIsVictory(true);
+      setShowGameOver(true);
+    } else {
+      setShowLevelClear(true);
+    }
   }, []);
 
   // Game over handler (out of hearts)
@@ -113,7 +120,7 @@ export default function App() {
       {
         score: scoreRef.current,
         currentLevel: currentLevelRef.current,
-        floorCount: floorCountRef.current,
+        floorCount: getLevelConfig(currentLevelRef.current).durationSeconds - timeRemainingRef.current,
         ballsCaught: ballsCaughtRef.current,
         highScore: currentSave.highScore,
         bestLevel: currentSave.bestLevel,
@@ -162,7 +169,7 @@ export default function App() {
       {/* Top HUD Header */}
       <HeaderBar
         levelConfig={levelConfig}
-        floorCount={floorCount}
+        timeRemaining={timeRemaining}
         score={score}
         ballsCaught={ballsCaught}
         hearts={hearts}
@@ -181,11 +188,11 @@ export default function App() {
       <GameCanvas
         levelConfig={levelConfig}
         isPaused={
-          isPaused || showGameOver || showHelp
+          isPaused || showLevelClear || showGameOver || showHelp
         }
         moveLeftPressed={moveLeftPressed}
         moveRightPressed={moveRightPressed}
-        onFloorChange={handleFloorChange}
+        onTimeChange={handleTimeChange}
         onScoreChange={handleScoreChange}
         onBallCaught={handleBallCaught}
         onHeartChange={handleHeartChange}
@@ -204,12 +211,21 @@ export default function App() {
       />
 
       {/* --- Modals --- */}
+      {showLevelClear && (
+        <LevelClearModal
+          levelConfig={levelConfig}
+          score={score}
+          ballsCaught={ballsCaught}
+          onNextLevel={() => restartLevel(currentLevelNumber + 1)}
+          onReplayLevel={() => restartLevel(currentLevelNumber)}
+        />
+      )}
       {showGameOver && (
         <GameOverModal
           isVictory={isVictory}
           score={score}
           ballsCaught={ballsCaught}
-          floorCount={floorCount}
+          elapsedSeconds={levelConfig.durationSeconds - timeRemaining}
           currentLevel={currentLevelNumber}
           highScore={saveData.highScore}
           levelConfig={levelConfig}

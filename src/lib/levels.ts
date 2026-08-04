@@ -1,39 +1,13 @@
 import { LevelConfig } from '../types';
 
 export const LEVEL_CONFIGS: LevelConfig[] = [
-  {
-    levelNumber: 1,
-    name: '10-Floor Challenge',
-    subtitle: 'Each floor gets faster. Chase balls and stay below the STOP gate!',
-    targetFloors: 10,
-    scrollSpeed: 0.82,
-    platformWidthMin: 112,
-    platformWidthMax: 142,
-    gapYMin: 72,
-    gapYMax: 88,
-    theme: {
-      bgTop: '#dff6ff',
-      bgBottom: '#b7ebff',
-      platformColor: '#a87343',
-      platformBorder: '#6d4828',
-      cloudColor: 'rgba(255, 255, 255, 0.8)',
-      accentColor: '#10b981', // emerald
-      wallColor: '#2f855a',
-      icon: '🌳',
-    },
-    probabilities: {
-      normal: 0.68,
-      conveyorLeft: 0.05,
-      conveyorRight: 0.05,
-      bounce: 0.12,
-      fragile: 0.04,
-      obstacle: 0.06,
-    },
-    ballSpawnRate: 0.65,
-  },
+  { levelNumber: 1, name: 'Sunny Dog Park', subtitle: 'Learn the course: chase balls and stay below the dog gate.', targetFloors: 0, durationSeconds: 30, scrollSpeed: .72, platformWidthMin: 118, platformWidthMax: 148, gapYMin: 70, gapYMax: 84, theme: { bgTop: '#dff6ff', bgBottom: '#b7ebff', platformColor: '#a87343', platformBorder: '#6d4828', cloudColor: 'rgba(255,255,255,.8)', accentColor: '#10b981', wallColor: '#2f855a', icon: '🌳' }, probabilities: { normal: .78, conveyorLeft: .03, conveyorRight: .03, bounce: .12, fragile: .02, obstacle: .02 }, ballSpawnRate: .68 },
+  { levelNumber: 2, name: 'Backyard Agility', subtitle: 'Puddles and hurdles join the ball chase.', targetFloors: 0, durationSeconds: 35, scrollSpeed: .92, platformWidthMin: 108, platformWidthMax: 138, gapYMin: 72, gapYMax: 88, theme: { bgTop: '#e6f8ea', bgBottom: '#c2f0d1', platformColor: '#6c8d47', platformBorder: '#475e2d', cloudColor: 'rgba(255,255,255,.85)', accentColor: '#16a34a', wallColor: '#3d612e', icon: '🌻' }, probabilities: { normal: .62, conveyorLeft: .05, conveyorRight: .05, bounce: .10, fragile: .05, obstacle: .13 }, ballSpawnRate: .70 },
+  { levelNumber: 3, name: 'Beach Boardwalk', subtitle: 'Weave poles and conveyor paths keep paws moving.', targetFloors: 0, durationSeconds: 40, scrollSpeed: 1.12, platformWidthMin: 102, platformWidthMax: 130, gapYMin: 74, gapYMax: 90, theme: { bgTop: '#fff8db', bgBottom: '#fdedae', platformColor: '#e0b56b', platformBorder: '#b38a42', cloudColor: 'rgba(255,255,255,.9)', accentColor: '#f59e0b', wallColor: '#d97706', icon: '🏖️' }, probabilities: { normal: .50, conveyorLeft: .10, conveyorRight: .10, bounce: .10, fragile: .07, obstacle: .13 }, ballSpawnRate: .74 },
+  { levelNumber: 4, name: 'Starlight Run', subtitle: 'Fragile clouds and narrow paths test quick paws.', targetFloors: 0, durationSeconds: 45, scrollSpeed: 1.34, platformWidthMin: 94, platformWidthMax: 120, gapYMin: 76, gapYMax: 92, theme: { bgTop: '#1a1f3c', bgBottom: '#2d336b', platformColor: '#64748b', platformBorder: '#334155', cloudColor: 'rgba(148,163,184,.5)', accentColor: '#a855f7', wallColor: '#475569', icon: '✨' }, probabilities: { normal: .42, conveyorLeft: .12, conveyorRight: .12, bounce: .09, fragile: .12, obstacle: .13 }, ballSpawnRate: .78 },
+  { levelNumber: 5, name: 'Championship Course', subtitle: 'The final mixed-obstacle sprint. Golden balls score big!', targetFloors: 0, durationSeconds: 50, scrollSpeed: 1.56, platformWidthMin: 88, platformWidthMax: 114, gapYMin: 78, gapYMax: 94, theme: { bgTop: '#fbcfe8', bgBottom: '#c4b5fd', platformColor: '#f43f5e', platformBorder: '#be123c', cloudColor: 'rgba(255,255,255,.95)', accentColor: '#ec4899', wallColor: '#8b5cf6', icon: '🏆' }, probabilities: { normal: .36, conveyorLeft: .14, conveyorRight: .14, bounce: .10, fragile: .12, obstacle: .14 }, ballSpawnRate: .82 },
 ];
 
 export function getLevelConfig(levelNumber: number): LevelConfig {
-  const index = Math.max(1, Math.min(LEVEL_CONFIGS.length, levelNumber)) - 1;
-  return LEVEL_CONFIGS[index];
+  return LEVEL_CONFIGS[Math.max(1, Math.min(LEVEL_CONFIGS.length, levelNumber)) - 1];
 }

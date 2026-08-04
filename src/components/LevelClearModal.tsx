@@ -69,9 +69,9 @@ export const LevelClearModal: React.FC<LevelClearModalProps> = ({
           </div>
 
           <div className="flex justify-between items-center text-sm">
-            <span className="text-slate-400">Floors Descended</span>
+            <span className="text-slate-400">Course Time</span>
             <span className="font-mono font-bold text-emerald-400">
-              {levelConfig.targetFloors} / {levelConfig.targetFloors}
+              {levelConfig.durationSeconds} sec complete
             </span>
           </div>
         </div>

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Volume2, VolumeX, Pause, Play, HelpCircle, Flag, Sparkles, Heart } from 'lucide-react';
+import { Volume2, VolumeX, Pause, Play, HelpCircle, Trophy, Sparkles, Heart } from 'lucide-react';
 import { LevelConfig } from '../types';
 
 interface HeaderBarProps {
   levelConfig: LevelConfig;
-  floorCount: number;
+  timeRemaining: number;
   score: number;
   ballsCaught: number;
   hearts: number;
@@ -18,7 +18,7 @@ interface HeaderBarProps {
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
   levelConfig,
-  floorCount,
+  timeRemaining,
   score,
   ballsCaught,
   hearts,
@@ -29,15 +29,15 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onToggleMute,
   onOpenHelp,
 }) => {
-  const progressPercent = Math.min(100, Math.round((floorCount / levelConfig.targetFloors) * 100));
+  const elapsedPercent = Math.min(100, Math.round(((levelConfig.durationSeconds - timeRemaining) / levelConfig.durationSeconds) * 100));
 
   return (
     <div className="w-full bg-slate-900/90 backdrop-blur-md text-white px-3 py-2 border-b border-slate-700/60 shadow-lg select-none z-20">
       {/* Top Row: Level Indicator & Action Buttons */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold px-2.5 py-1 rounded-full text-xs shadow-sm">
-          <Flag className="w-3.5 h-3.5" />
-          <span>10-Floor Challenge</span>
+          <Trophy className="w-3.5 h-3.5" />
+          <span>Level {levelConfig.levelNumber}/5: {levelConfig.name}</span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -106,12 +106,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden border border-slate-700/50">
         <div
           className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-500 transition-all duration-300"
-          style={{ width: `${progressPercent}%` }}
+          style={{ width: `${elapsedPercent}%` }}
         />
       </div>
       <div className="flex justify-between text-[10px] text-slate-400 mt-0.5 font-mono">
-        <span>Floor {floorCount} / {levelConfig.targetFloors}</span>
-        <span>Speeds up every floor</span>
+        <span>Survive: {timeRemaining}s</span>
+        <span>Speed increases through the level</span>
       </div>
     </div>
   );

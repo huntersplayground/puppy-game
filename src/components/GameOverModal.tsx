@@ -7,7 +7,7 @@ interface GameOverModalProps {
   isVictory: boolean;
   score: number;
   ballsCaught: number;
-  floorCount: number;
+  elapsedSeconds: number;
   currentLevel: number;
   highScore: number;
   levelConfig: LevelConfig;
@@ -18,7 +18,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   isVictory,
   score,
   ballsCaught,
-  floorCount,
+  elapsedSeconds,
   currentLevel,
   highScore,
   levelConfig,
@@ -64,8 +64,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         </h2>
         <p className={`text-sm font-semibold mb-4 ${isVictory ? 'text-amber-300' : 'text-slate-400'}`}>
           {isVictory
-            ? 'You guided your puppy through all 10 floors—what a ball-chasing champion!'
-            : `Great try on Floor ${floorCount} of the 10-Floor Challenge!`}
+            ? 'You guided your puppy through all five courses—what a ball-chasing champion!'
+            : `Great try on Level ${currentLevel}: ${Math.max(0, elapsedSeconds)} seconds survived!`}
         </p>
 
         {isNewHighScore && (
@@ -98,9 +98,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           </div>
 
           <div className="flex justify-between items-center text-sm">
-            <span className="text-slate-400">Floors Reached</span>
+            <span className="text-slate-400">Time Survived</span>
             <span className="font-mono font-bold text-emerald-400">
-              Floor {floorCount} (Lvl {currentLevel})
+              {Math.max(0, elapsedSeconds)} sec (Lvl {currentLevel})
             </span>
           </div>
 

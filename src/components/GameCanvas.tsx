@@ -13,7 +13,7 @@ interface GameCanvasProps {
   isPaused: boolean;
   moveLeftPressed: boolean;
   moveRightPressed: boolean;
-  onFloorChange: (floor: number) => void;
+  onTimeChange: (seconds: number) => void;
   onScoreChange: (deltaScore: number) => void;
   onBallCaught: () => void;
   onHeartChange: (hearts: number) => void;
@@ -30,7 +30,6 @@ const MAX_FALL_SPEED = 9.5;
 const MOVE_SPEED = 5.2;
 const CEILING_DANGER_Y = 22;
 const GATE_WARNING_Y = 105;
-const SPEED_PER_FLOOR = 0.16;
 const MAX_SCROLL_SPEED = 2.42;
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
@@ -38,7 +37,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   isPaused,
   moveLeftPressed,
   moveRightPressed,
-  onFloorChange,
+  onTimeChange,
   onScoreChange,
   onBallCaught,
   onHeartChange,
@@ -72,7 +71,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const platformsRef = useRef<Platform[]>([]);
   const particlesRef = useRef<Particle[]>([]);
-  const floorCounterRef = useRef<number>(0);
+  const levelElapsedMsRef = useRef<number>(0);
+  const lastReportedSecondsRef = useRef<number>(-1);
   const distanceTravelledRef = useRef<number>(0);
   const lastSpawnYRef = useRef<number>(VIRTUAL_HEIGHT);
   const keysRef = useRef<{ [key: string]: boolean }>({});
@@ -108,7 +108,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const id = 'plat_' + Math.random().toString(36).substring(2, 9);
       const difficulty = Math.min(
         1,
-        floorCounterRef.current / Math.max(1, levelConfig.targetFloors - 1)
+        levelElapsedMsRef.current / Math.max(1, levelConfig.durationSeconds * 1000)
       );
       const width = isStarting
         ? 140
@@ -183,9 +183,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const initLevel = useCallback(() => {
     hasTriggeredClearRef.current = false;
     gateRattleRef.current = 0;
-    floorCounterRef.current = 0;
+    levelElapsedMsRef.current = 0;
+    lastReportedSecondsRef.current = levelConfig.durationSeconds;
     distanceTravelledRef.current = 0;
-    onFloorChange(0);
+    onTimeChange(levelConfig.durationSeconds);
     introTimerRef.current = 180; // 3 seconds preparation countdown before game starts
 
     const initialPlats: Platform[] = [];
@@ -229,7 +230,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
 
     particlesRef.current = [];
-  }, [generatePlatform, levelConfig, maxHearts, onFloorChange]);
+  }, [generatePlatform, levelConfig, maxHearts, onTimeChange]);
 
   useEffect(() => {
     initLevel();
@@ -290,7 +291,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     let animationFrameId: number;
     let lastTime = performance.now();
 
-    const updateGame = () => {
+    const updateGame = (deltaMs: number) => {
       if (isPausedRef.current || hasTriggeredClearRef.current) return;
 
       if (introTimerRef.current > 0) {
@@ -298,11 +299,27 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         return; // Pause all game movement and scrolling while the preparation banner is shown
       }
 
+      levelElapsedMsRef.current += deltaMs;
+      const secondsRemaining = Math.max(
+        0,
+        Math.ceil(levelConfig.durationSeconds - levelElapsedMsRef.current / 1000)
+      );
+      if (secondsRemaining !== lastReportedSecondsRef.current) {
+        lastReportedSecondsRef.current = secondsRemaining;
+        onTimeChange(secondsRemaining);
+      }
+      if (secondsRemaining === 0) {
+        hasTriggeredClearRef.current = true;
+        sound.levelClear();
+        onLevelClear();
+        return;
+      }
+
       const player = playerRef.current;
       const platforms = platformsRef.current;
       const scrollSpeed = Math.min(
         MAX_SCROLL_SPEED,
-        levelConfig.scrollSpeed + floorCounterRef.current * SPEED_PER_FLOOR
+        levelConfig.scrollSpeed + (1 - secondsRemaining / levelConfig.durationSeconds) * 0.48
       );
 
       // 1. Check controls (Touch buttons + Keyboard arrows)
@@ -497,17 +514,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       distanceTravelledRef.current += scrollSpeed;
       if (distanceTravelledRef.current >= 80) {
         distanceTravelledRef.current = 0;
-        floorCounterRef.current += 1;
-        onFloorChange(floorCounterRef.current);
         onScoreChange(5); // +5 points per floor descended!
-
-        // Check if level cleared!
-        if (floorCounterRef.current >= levelConfig.targetFloors && !hasTriggeredClearRef.current) {
-          hasTriggeredClearRef.current = true;
-          sound.levelClear();
-          onLevelClear();
-          return;
-        }
 
         const gap =
           levelConfig.gapYMin +
@@ -681,25 +688,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.fillRect(VIRTUAL_WIDTH - 8, y, 6, 6);
       }
 
-      // 3. Draw the rattling dog-agility STOP gate at the danger boundary.
+      // 3. Draw the rattling white dog gate at the danger boundary.
       const gateShake = gateRattleRef.current * Math.sin(player.stateTimer * 0.9) * 2.5;
       ctx.save();
       ctx.translate(gateShake, 0);
-      ctx.fillStyle = '#334155';
-      ctx.fillRect(10, 12, 8, 32);
-      ctx.fillRect(VIRTUAL_WIDTH - 18, 12, 8, 32);
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(14, 20, VIRTUAL_WIDTH - 28, 12);
-      ctx.fillStyle = '#1e293b';
-      for (let x = 18; x < VIRTUAL_WIDTH - 18; x += 32) {
-        ctx.beginPath();
-        ctx.moveTo(x, 20);
-        ctx.lineTo(x + 12, 20);
-        ctx.lineTo(x - 2, 32);
-        ctx.lineTo(x - 14, 32);
-        ctx.closePath();
-        ctx.fill();
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(11, 8, 10, 42);
+      ctx.fillRect(VIRTUAL_WIDTH - 21, 8, 10, 42);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(18, 15, VIRTUAL_WIDTH - 36, 5);
+      ctx.fillRect(18, 39, VIRTUAL_WIDTH - 36, 5);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      for (let x = 32; x < VIRTUAL_WIDTH - 25; x += 22) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x, 18, 8, 24);
+        ctx.strokeRect(x, 18, 8, 24);
       }
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.arc(16, 8, 7, 0, Math.PI * 2);
+      ctx.arc(VIRTUAL_WIDTH - 16, 8, 7, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = '#ef4444';
       ctx.beginPath();
       for (let i = 0; i < 8; i++) {
@@ -721,7 +731,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       if (gateRattleRef.current > 0.1) {
         ctx.fillStyle = '#fef08a';
         ctx.font = 'bold 10px sans-serif';
-        ctx.fillText('RATTLE!', VIRTUAL_WIDTH / 2, 46);
+        ctx.fillText('RATTLE!', VIRTUAL_WIDTH / 2, 55);
       }
       ctx.restore();
 
@@ -1030,7 +1040,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(
-          '10-Floor Challenge',
+          `Level ${levelConfig.levelNumber}: ${levelConfig.name}`,
           VIRTUAL_WIDTH / 2,
           VIRTUAL_HEIGHT / 2 - 34
         );
@@ -1046,12 +1056,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.font = 'bold 13px sans-serif';
         ctx.fillStyle = '#f59e0b';
         ctx.fillText(
-          'Every floor gets faster—stay below',
+          `Survive ${levelConfig.durationSeconds} seconds—stay below`,
           VIRTUAL_WIDTH / 2,
           VIRTUAL_HEIGHT / 2 + 14
         );
         ctx.fillText(
-          'the STOP gate and chase the balls!',
+          'the dog gate and chase the balls!',
           VIRTUAL_WIDTH / 2,
           VIRTUAL_HEIGHT / 2 + 32
         );
@@ -1067,14 +1077,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.restore();
       }
 
-      // 8. Draw compact floor and speed progress below the STOP gate.
+      // 8. Draw current level survival time and pace below the dog gate.
       ctx.save();
       ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
       ctx.beginPath();
       ctx.roundRect(VIRTUAL_WIDTH / 2 - 85, 58, 170, 20, 10);
       ctx.fill();
 
-      const progressRatio = Math.min(1, floorCounterRef.current / levelConfig.targetFloors);
+      const progressRatio = Math.min(1, levelElapsedMsRef.current / (levelConfig.durationSeconds * 1000));
       ctx.fillStyle = '#10b981'; // Emerald green progress fill
       ctx.beginPath();
       ctx.roundRect(VIRTUAL_WIDTH / 2 - 83, 60, 166 * progressRatio, 16, 8);
@@ -1085,10 +1095,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.textAlign = 'center';
       const activeSpeed = Math.min(
         MAX_SCROLL_SPEED,
-        levelConfig.scrollSpeed + floorCounterRef.current * SPEED_PER_FLOOR
+        levelConfig.scrollSpeed + progressRatio * 0.48
       );
       ctx.fillText(
-        `FLOOR ${floorCounterRef.current}/${levelConfig.targetFloors} • SPEED ${activeSpeed.toFixed(2)}`,
+        `SURVIVE ${lastReportedSecondsRef.current}s • SPEED ${activeSpeed.toFixed(2)}`,
         VIRTUAL_WIDTH / 2,
         72
       );
@@ -1099,7 +1109,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const loop = (timestamp: number) => {
       const dt = timestamp - lastTime;
       if (dt > 14) {
-        updateGame();
+        updateGame(Math.min(dt, 50));
         render();
         lastTime = timestamp;
       }
@@ -1115,7 +1125,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     levelConfig,
     maxHearts,
     onBallCaught,
-    onFloorChange,
+    onTimeChange,
     onGameOver,
     onHeartChange,
     onLevelClear,
