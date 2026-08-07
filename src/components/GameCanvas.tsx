@@ -404,8 +404,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       }
 
-      // 2. Horizontal movement & screen wrapping / borders
-      player.x += player.vx;
+      // 2. Horizontal movement & screen wrapping / borders. Conveyors push
+      // continuously while the puppy is standing on their belt.
+      const standingPlatform = player.isGrounded
+        ? platforms.find((p) => p.id === player.currentPlatformId && !p.isBroken)
+        : undefined;
+      player.x += player.vx + (standingPlatform?.conveyorSpeed || 0);
       if (player.x < 12) player.x = 12;
       if (player.x + player.width > VIRTUAL_WIDTH - 12) {
         player.x = VIRTUAL_WIDTH - 12 - player.width;
@@ -590,11 +594,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             player.isGrounded = true;
             player.currentPlatformId = p.id;
             landed = true;
-
-            // Apply conveyor movement
-            if (p.conveyorSpeed) {
-              player.x += p.conveyorSpeed;
-            }
 
             // Apply Spring Bounce platform!
             if (p.type === 'bounce') {
