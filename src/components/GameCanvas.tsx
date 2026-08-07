@@ -922,11 +922,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.font = 'bold 8px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('STOP', VIRTUAL_WIDTH - 40, 55);
-      if (gateRattleRef.current > 0.1) {
-        ctx.fillStyle = '#fef08a';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillText('RATTLE!', VIRTUAL_WIDTH / 2, 55);
-      }
       ctx.restore();
 
       // Late-game rival cat: same-sized, quick, and focused on stealing balls.
@@ -1420,32 +1415,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           className="block bg-slate-900 shadow-2xl rounded-t-xl sm:rounded-xl touch-none select-none"
         />
 
-        {/* Mobile players can hold either lower side of the game itself to steer. */}
-        <div className="absolute inset-x-0 bottom-0 h-[38%] flex touch-none">
+        {/* Mobile players can hold either half of the game itself to steer. */}
+        <div
+          className="absolute inset-0 flex touch-none select-none"
+          style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', touchAction: 'none' }}
+          onContextMenu={(event) => event.preventDefault()}
+        >
           <button
             type="button"
             aria-label="Hold to move left"
             onPointerDown={(event) => startTouchMove('left', event)}
             onPointerUp={stopTouchMove}
             onPointerCancel={stopTouchMove}
-            className="group flex-1 flex items-end justify-start p-4 sm:p-5 focus:outline-none"
-          >
-            <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-white/30 bg-slate-950/35 text-white/75 flex items-center justify-center text-3xl sm:text-4xl transition group-active:scale-90 group-active:bg-amber-500/70 group-active:text-slate-950">
-              ‹
-            </span>
-          </button>
+            className="flex-1 cursor-default focus:outline-none"
+          />
           <button
             type="button"
             aria-label="Hold to move right"
             onPointerDown={(event) => startTouchMove('right', event)}
             onPointerUp={stopTouchMove}
             onPointerCancel={stopTouchMove}
-            className="group flex-1 flex items-end justify-end p-4 sm:p-5 focus:outline-none"
-          >
-            <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-white/30 bg-slate-950/35 text-white/75 flex items-center justify-center text-3xl sm:text-4xl transition group-active:scale-90 group-active:bg-amber-500/70 group-active:text-slate-950">
-              ›
-            </span>
-          </button>
+            className="flex-1 cursor-default focus:outline-none"
+          />
         </div>
       </div>
     </div>
