@@ -623,8 +623,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             player.vy = 1;
           }
         }
-      } else {
-        player.isGrounded = false;
+      } else if (player.isGrounded) {
+        // A grounded puppy moves upward with its platform. Only release it
+        // when the platform disappears or the puppy actually walks off it.
+        const groundPlatform = platforms.find((p) => p.id === player.currentPlatformId);
+        const isStillOverPlatform = groundPlatform &&
+          !groundPlatform.isBroken &&
+          player.x + player.width - 6 > groundPlatform.x &&
+          player.x + 6 < groundPlatform.x + groundPlatform.width;
+        if (!isStillOverPlatform) {
+          player.isGrounded = false;
+          player.currentPlatformId = null;
+          player.vy = 1;
+        }
       }
 
       // 7. Check Ceiling Danger (top of screen soft rain cloud bumper)

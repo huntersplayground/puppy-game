@@ -1,18 +1,37 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { X, Smartphone, Keyboard, Sparkles } from 'lucide-react';
 
 interface HowToPlayModalProps {
   onClose: () => void;
+  onDeveloperSkip: () => void;
 }
 
-export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose }) => {
+export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose, onDeveloperSkip }) => {
+  const puppyTapCountRef = useRef(0);
+  const lastPuppyTapRef = useRef(0);
+
+  const handlePuppyTap = () => {
+    const now = Date.now();
+    if (now - lastPuppyTapRef.current > 2000) {
+      puppyTapCountRef.current = 0;
+    }
+    lastPuppyTapRef.current = now;
+    puppyTapCountRef.current += 1;
+    if (puppyTapCountRef.current === 5) {
+      puppyTapCountRef.current = 0;
+      onDeveloperSkip();
+    }
+  };
+
   return (
     <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 select-none">
       <div className="bg-slate-900 border border-slate-700 rounded-3xl p-5 max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🐶</span>
+            <button type="button" onClick={handlePuppyTap} className="text-2xl leading-none" aria-label="Puppy">
+              🐶
+            </button>
             <h2 className="text-lg font-extrabold text-white">How to Play</h2>
           </div>
           <button

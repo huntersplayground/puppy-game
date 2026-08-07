@@ -45,13 +45,15 @@ export default function App() {
   const scoreRef = useRef(score);
   const ballsCaughtRef = useRef(ballsCaught);
   const levelBallsCaughtRef = useRef(0);
+  const isDeveloperRunRef = useRef(false);
   const timeRemainingRef = useRef(timeRemaining);
   const saveDataRef = useRef(saveData);
 
   const levelConfig = getLevelConfig(currentLevelNumber);
 
   // Reset session when starting or replaying a level
-  const restartLevel = useCallback((levelNum: number, preserveRunScore: boolean = false) => {
+  const restartLevel = useCallback((levelNum: number, preserveRunScore: boolean = false, isDeveloperRun: boolean = false) => {
+    isDeveloperRunRef.current = isDeveloperRun;
     currentLevelRef.current = levelNum;
     if (!preserveRunScore) {
       scoreRef.current = 0;
@@ -94,21 +96,23 @@ export default function App() {
   const handleLevelClear = useCallback(() => {
     const clearedLevel = currentLevelRef.current;
     const clearedConfig = getLevelConfig(clearedLevel);
-    const currentSave = saveDataRef.current;
-    const newSave = recordGameEnd(
-      {
-        score: scoreRef.current,
-        currentLevel: clearedLevel,
-        floorCount: clearedConfig.durationSeconds - timeRemainingRef.current,
-        ballsCaught: levelBallsCaughtRef.current,
-        highScore: currentSave.highScore,
-        bestLevel: currentSave.bestLevel,
-        totalBallsEver: currentSave.totalBallsEver,
-      },
-      true
-    );
-    saveDataRef.current = newSave;
-    setSaveData(newSave);
+    if (!isDeveloperRunRef.current) {
+      const currentSave = saveDataRef.current;
+      const newSave = recordGameEnd(
+        {
+          score: scoreRef.current,
+          currentLevel: clearedLevel,
+          floorCount: clearedConfig.durationSeconds - timeRemainingRef.current,
+          ballsCaught: levelBallsCaughtRef.current,
+          highScore: currentSave.highScore,
+          bestLevel: currentSave.bestLevel,
+          totalBallsEver: currentSave.totalBallsEver,
+        },
+        true
+      );
+      saveDataRef.current = newSave;
+      setSaveData(newSave);
+    }
 
     if (clearedLevel >= LEVEL_CONFIGS.length) {
       setIsVictory(true);
@@ -120,21 +124,23 @@ export default function App() {
 
   // Game over handler (out of hearts)
   const handleGameOver = useCallback(() => {
-    const currentSave = saveDataRef.current;
-    const newSave = recordGameEnd(
-      {
-        score: scoreRef.current,
-        currentLevel: currentLevelRef.current,
-        floorCount: getLevelConfig(currentLevelRef.current).durationSeconds - timeRemainingRef.current,
-        ballsCaught: levelBallsCaughtRef.current,
-        highScore: currentSave.highScore,
-        bestLevel: currentSave.bestLevel,
-        totalBallsEver: currentSave.totalBallsEver,
-      },
-      false
-    );
-    saveDataRef.current = newSave;
-    setSaveData(newSave);
+    if (!isDeveloperRunRef.current) {
+      const currentSave = saveDataRef.current;
+      const newSave = recordGameEnd(
+        {
+          score: scoreRef.current,
+          currentLevel: currentLevelRef.current,
+          floorCount: getLevelConfig(currentLevelRef.current).durationSeconds - timeRemainingRef.current,
+          ballsCaught: levelBallsCaughtRef.current,
+          highScore: currentSave.highScore,
+          bestLevel: currentSave.bestLevel,
+          totalBallsEver: currentSave.totalBallsEver,
+        },
+        false
+      );
+      saveDataRef.current = newSave;
+      setSaveData(newSave);
+    }
     setIsVictory(false);
     setShowGameOver(true);
   }, []);
@@ -222,7 +228,7 @@ export default function App() {
           levelConfig={levelConfig}
           score={score}
           ballsCaught={ballsCaught}
-          onNextLevel={() => restartLevel(currentLevelNumber + 1, true)}
+          onNextLevel={() => restartLevel(currentLevelNumber + 1, true, isDeveloperRunRef.current)}
           onReplayLevel={() => restartLevel(currentLevelNumber)}
         />
       )}
@@ -241,6 +247,13 @@ export default function App() {
 
       {showHelp && (
         <HowToPlayModal
+          onDeveloperSkip={() => {
+            const nextLevel = currentLevelRef.current >= LEVEL_CONFIGS.length
+              ? 1
+              : currentLevelRef.current + 1;
+            restartLevel(nextLevel, false, true);
+            setShowHelp(false);
+          }}
           onClose={() => {
             setShowHelp(false);
             setIsPaused(false);
