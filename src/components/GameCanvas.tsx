@@ -31,6 +31,19 @@ const MOVE_SPEED = 5.2;
 const CEILING_DANGER_Y = 22;
 const GATE_WARNING_Y = 105;
 const MAX_SCROLL_SPEED = 3.4;
+const RIVAL_CAT_WIDTH = 36;
+const RIVAL_CAT_HEIGHT = 32;
+
+type RivalCat = {
+  x: number;
+  y: number;
+  targetPlatformId: string;
+  facing: 'left' | 'right';
+  state: 'running' | 'happy' | 'hurt';
+  stateTimer: number;
+  hp: number;
+  hurtTimer: number;
+};
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   levelConfig,
@@ -84,9 +97,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const hasTriggeredClearRef = useRef(false);
   const introTimerRef = useRef(220);
   const gateRattleRef = useRef(0);
-  const rivalDogTimerRef = useRef(0);
-  const rivalDogStartedRef = useRef(false);
-  const rivalDogYRef = useRef(-90);
+  const rivalCatRef = useRef<RivalCat | null>(null);
+  const rivalCatStartedRef = useRef(false);
+  const rivalCatDefeatedRef = useRef(false);
 
   // Sync prop changes to refs
   useEffect(() => {
@@ -192,9 +205,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const initLevel = useCallback(() => {
     hasTriggeredClearRef.current = false;
     gateRattleRef.current = 0;
-    rivalDogTimerRef.current = 0;
-    rivalDogStartedRef.current = false;
-    rivalDogYRef.current = -90;
+    rivalCatRef.current = null;
+    rivalCatStartedRef.current = false;
+    rivalCatDefeatedRef.current = false;
     levelElapsedMsRef.current = 0;
     lastReportedSecondsRef.current = levelConfig.durationSeconds;
     distanceTravelledRef.current = 0;
@@ -378,32 +391,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         player.invincibleTimer--;
       }
 
-      if (
-        levelConfig.levelNumber >= 8 &&
-        !rivalDogStartedRef.current &&
-        levelElapsedMsRef.current >= levelConfig.durationSeconds * 450
-      ) {
-        rivalDogStartedRef.current = true;
-        rivalDogTimerRef.current = 210;
-      }
-      if (rivalDogTimerRef.current > 0) {
-        rivalDogTimerRef.current--;
-        rivalDogYRef.current = -80 + (210 - rivalDogTimerRef.current) * 0.7;
-        if (player.y < rivalDogYRef.current + 72 && player.invincibleTimer === 0) {
-          player.invincibleTimer = 55;
-          player.vy = 5;
-          const newHearts = Math.max(0, player.hearts - 1);
-          player.hearts = newHearts;
-          onHeartChange(newHearts);
-          spawnParticles(player.x + player.width / 2, player.y, '#f97316', 1, 'text', 'Rival Dog! -1 HP');
-          if (newHearts === 0) {
-            sound.gameOver();
-            onGameOver();
-            return;
-          }
-        }
-      }
-
       // 2. Horizontal movement & screen wrapping / borders. Conveyors push
       // continuously while the puppy is standing on their belt.
       const standingPlatform = player.isGrounded
@@ -564,7 +551,125 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       }
 
-      // 5. Spawn new platforms at bottom
+      // 5. Rival cat: it enters on a ball's platform, races for that ball,
+      // then celebrates briefly before choosing another visible ball.
+      const chooseCatTarget = () => {
+        const choices = platforms.filter(
+          (p) => p.hasBall && !p.ballCaught && !p.isBroken && p.y > 65 && p.y < VIRTUAL_HEIGHT - 25
+        );
+        if (choices.length === 0) return null;
+        // Prefer a ball behind an obstacle when one is available. That makes
+        // the cat's hidden health meaningful without exposing it in the UI.
+        const riskyChoices = choices.filter((p) => p.type === 'obstacle');
+        const pool = riskyChoices.length > 0 && Math.random() < 0.7 ? riskyChoices : choices;
+        return pool[Math.floor(Math.random() * pool.length)];
+      };
+      const enterCatOnPlatform = (target: Platform, hp: number) => {
+        const entersFromLeft = Math.random() < 0.5;
+        rivalCatRef.current = {
+          x: entersFromLeft ? target.x - RIVAL_CAT_WIDTH - 4 : target.x + target.width + 4,
+          y: target.y - RIVAL_CAT_HEIGHT,
+          targetPlatformId: target.id,
+          facing: entersFromLeft ? 'right' : 'left',
+          state: 'running',
+          stateTimer: 0,
+          hp,
+          hurtTimer: 0,
+        };
+      };
+
+      if (
+        levelConfig.levelNumber >= 8 &&
+        !rivalCatStartedRef.current &&
+        levelElapsedMsRef.current >= levelConfig.durationSeconds * 350
+      ) {
+        rivalCatStartedRef.current = true;
+        const target = chooseCatTarget();
+        if (target) enterCatOnPlatform(target, levelConfig.levelNumber === 10 ? 8 : levelConfig.levelNumber === 9 ? 5 : 3);
+      }
+
+      const rivalCat = rivalCatRef.current;
+      if (rivalCat) {
+        const target = platforms.find((p) => p.id === rivalCat.targetPlatformId);
+        rivalCat.stateTimer++;
+        if (rivalCat.hurtTimer > 0) rivalCat.hurtTimer--;
+
+        if (!target || target.isBroken || target.y < -RIVAL_CAT_HEIGHT || target.y > VIRTUAL_HEIGHT) {
+          const nextTarget = chooseCatTarget();
+          if (nextTarget) enterCatOnPlatform(nextTarget, rivalCat.hp);
+          else rivalCatRef.current = null;
+        } else {
+          rivalCat.y = target.y - RIVAL_CAT_HEIGHT;
+          const ballX = target.x + (target.ballX || 0);
+          const ballY = target.y + (target.ballY || 0) + (target.ballBounceY || 0);
+
+          if (rivalCat.state === 'happy') {
+            if (rivalCat.stateTimer >= 38) {
+              const nextTarget = chooseCatTarget();
+              if (nextTarget) enterCatOnPlatform(nextTarget, rivalCat.hp);
+              else rivalCatRef.current = null;
+            }
+          } else {
+            const catCenter = rivalCat.x + RIVAL_CAT_WIDTH / 2;
+            const direction = ballX >= catCenter ? 1 : -1;
+            rivalCat.facing = direction === 1 ? 'right' : 'left';
+            rivalCat.x += direction * (levelConfig.levelNumber === 10 ? 3.8 : levelConfig.levelNumber === 9 ? 3.35 : 2.9);
+
+            const spikesActive = target.obstacleType !== 'spikes' || ((player.stateTimer + (target.hazardPhase || 0)) % 120 >= 70);
+            if (target.type === 'obstacle' && spikesActive && rivalCat.hurtTimer === 0) {
+              const obstacleCenter = target.x + (target.obstacleX || 0) + 12;
+              if (Math.abs(rivalCat.x + RIVAL_CAT_WIDTH / 2 - obstacleCenter) < 18) {
+                rivalCat.hp--;
+                rivalCat.hurtTimer = 28;
+                rivalCat.state = 'hurt';
+                rivalCat.x += direction * 18;
+                spawnParticles(obstacleCenter, target.y - 12, '#94a3b8', 6, 'dust');
+                if (rivalCat.hp <= 0) {
+                  spawnParticles(rivalCat.x + RIVAL_CAT_WIDTH / 2, rivalCat.y, '#f8fafc', 10, 'sparkle');
+                  rivalCatRef.current = null;
+                  rivalCatDefeatedRef.current = true;
+                }
+              }
+            }
+
+            if (rivalCatRef.current && Math.abs(rivalCat.x + RIVAL_CAT_WIDTH / 2 - ballX) < 10) {
+              target.ballCaught = true;
+              rivalCat.state = 'happy';
+              rivalCat.stateTimer = 0;
+              spawnParticles(ballX, ballY, '#fef08a', 10, 'sparkle');
+              spawnParticles(ballX, ballY - 10, '#ffffff', 1, 'text', 'Mrrp!');
+            }
+          }
+        }
+      } else if (rivalCatStartedRef.current && !rivalCatDefeatedRef.current) {
+        const target = chooseCatTarget();
+        if (target) enterCatOnPlatform(target, levelConfig.levelNumber === 10 ? 8 : levelConfig.levelNumber === 9 ? 5 : 3);
+      }
+
+      const activeCat = rivalCatRef.current;
+      if (activeCat && player.invincibleTimer === 0) {
+        const catOverlap =
+          player.x + player.width > activeCat.x + 5 &&
+          player.x + 5 < activeCat.x + RIVAL_CAT_WIDTH &&
+          player.y + player.height > activeCat.y + 4 &&
+          player.y + 4 < activeCat.y + RIVAL_CAT_HEIGHT;
+        if (catOverlap) {
+          player.invincibleTimer = 55;
+          player.vy = -5;
+          const newHearts = Math.max(0, player.hearts - 1);
+          player.hearts = newHearts;
+          onHeartChange(newHearts);
+          sound.catBump();
+          spawnParticles(player.x + player.width / 2, player.y, '#f97316', 1, 'text', 'Cat bump! -1 HP');
+          if (newHearts === 0) {
+            sound.gameOver();
+            onGameOver();
+            return;
+          }
+        }
+      }
+
+      // 6. Spawn new platforms at bottom
       distanceTravelledRef.current += scrollSpeed;
       if (distanceTravelledRef.current >= 80) {
         distanceTravelledRef.current = 0;
@@ -577,7 +682,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         platforms.push(generatePlatform(newY));
       }
 
-      // 6. Platform collision detection (landing on platform from above)
+      // 7. Platform collision detection (landing on platform from above)
       if (player.vy >= 0) {
         let landed = false;
         for (const p of platforms) {
@@ -637,7 +742,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       }
 
-      // 7. Check Ceiling Danger (top of screen soft rain cloud bumper)
+      // 8. Check Ceiling Danger (top of screen soft rain cloud bumper)
       if (player.y < CEILING_DANGER_Y && player.invincibleTimer === 0) {
         sound.ouch();
         player.invincibleTimer = 50;
@@ -660,7 +765,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       }
 
-      // 8. Check Bottom Fall (off the bottom of the shaft!)
+      // 9. Check Bottom Fall (off the bottom of the shaft!)
       if (player.y > VIRTUAL_HEIGHT + 20) {
         sound.ouch();
         const newHearts = Math.max(0, player.hearts - 1);
@@ -706,7 +811,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       }
 
-      // 9. Update particles
+      // 10. Update particles
       for (let i = particlesRef.current.length - 1; i >= 0; i--) {
         const pt = particlesRef.current[i];
         pt.x += pt.vx;
@@ -795,32 +900,77 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
       ctx.restore();
 
-      // Late-game rival dog chase: a large pup presses down from above.
-      if (rivalDogTimerRef.current > 0) {
-        const rivalY = rivalDogYRef.current;
-        const rivalX = player.x + player.width / 2;
+      // Late-game rival cat: same-sized, quick, and focused on stealing balls.
+      const rivalCat = rivalCatRef.current;
+      if (rivalCat) {
         ctx.save();
-        ctx.translate(rivalX, rivalY);
-        ctx.fillStyle = '#7c2d12';
+        ctx.translate(rivalCat.x + RIVAL_CAT_WIDTH / 2, rivalCat.y + RIVAL_CAT_HEIGHT / 2);
+        if (rivalCat.facing === 'left') ctx.scale(-1, 1);
+        if (rivalCat.hurtTimer % 4 > 1) ctx.globalAlpha = 0.55;
+
+        // Tail, rounded tabby body, ears, and bright eyes mirror the approved cat concept.
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.ellipse(0, 18, 42, 22, 0, 0, Math.PI * 2);
+        ctx.moveTo(-13, 4);
+        ctx.quadraticCurveTo(-23, -7, -18, -14);
+        ctx.stroke();
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.ellipse(-3, 5, 16, 10, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#ea580c';
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
-        ctx.arc(18, 4, 24, 0, Math.PI * 2);
+        ctx.ellipse(5, 8, 8, 5, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#fef3c7';
+        ctx.fillStyle = '#94a3b8';
         ctx.beginPath();
-        ctx.ellipse(29, 10, 13, 9, 0, 0, Math.PI * 2);
+        ctx.arc(10, -5, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#1e293b';
+        ctx.stroke();
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.moveTo(3, -12);
+        ctx.lineTo(4, -21);
+        ctx.lineTo(10, -14);
+        ctx.moveTo(14, -14);
+        ctx.lineTo(19, -21);
+        ctx.lineTo(20, -10);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#fda4af';
+        ctx.beginPath();
+        ctx.arc(15, -3, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(11, -7, 2.5, 0, Math.PI * 2);
+        ctx.arc(17, -7, 2.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#1e293b';
         ctx.beginPath();
-        ctx.arc(34, 8, 3, 0, Math.PI * 2);
+        ctx.arc(12, -7, 1, 0, Math.PI * 2);
+        ctx.arc(18, -7, 1, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('WOOF!', 0, -22);
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 1.5;
+        for (const stripeX of [-8, -2, 4]) {
+          ctx.beginPath();
+          ctx.moveTo(stripeX, -2);
+          ctx.lineTo(stripeX + 3, 5);
+          ctx.stroke();
+        }
+        if (rivalCat.state === 'happy') {
+          ctx.fillStyle = '#fb7185';
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('♥', 0, -24);
+        }
         ctx.restore();
       }
 

@@ -172,6 +172,28 @@ class SoundManager {
   }
 
   /**
+   * Short, playful meow when the rival cat bumps the puppy.
+   */
+  public catBump() {
+    if (this.muted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(720, now);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 0.16);
+    gain.gain.setValueAtTime(0.24, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.18);
+  }
+
+  /**
    * Level cleared fanfare
    */
   public levelClear() {
