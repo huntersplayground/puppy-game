@@ -1033,16 +1033,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.globalAlpha = alpha;
         ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
         ctx.beginPath();
-        ctx.roundRect(20, VIRTUAL_HEIGHT / 2 - 68, VIRTUAL_WIDTH - 40, 136, 16);
+        ctx.roundRect(20, VIRTUAL_HEIGHT / 2 - 56, VIRTUAL_WIDTH - 40, 112, 16);
         ctx.fill();
 
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(
-          `Level ${levelConfig.levelNumber}: ${levelConfig.name}`,
+          'Ready?',
           VIRTUAL_WIDTH / 2,
-          VIRTUAL_HEIGHT / 2 - 34
+          VIRTUAL_HEIGHT / 2 - 24
         );
 
         ctx.font = 'bold 14px sans-serif';
@@ -1050,20 +1050,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.fillText(
           'Move left & right to catch balls',
           VIRTUAL_WIDTH / 2,
-          VIRTUAL_HEIGHT / 2 - 8
-        );
-
-        ctx.font = 'bold 13px sans-serif';
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillText(
-          `Survive ${levelConfig.durationSeconds} seconds—stay below`,
-          VIRTUAL_WIDTH / 2,
-          VIRTUAL_HEIGHT / 2 + 14
-        );
-        ctx.fillText(
-          'the dog gate and chase the balls!',
-          VIRTUAL_WIDTH / 2,
-          VIRTUAL_HEIGHT / 2 + 32
+          VIRTUAL_HEIGHT / 2
         );
 
         const secondsLeft = Math.ceil(introTimerRef.current / 60);
@@ -1072,37 +1059,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.fillText(
           `Game starting in ${secondsLeft}...`,
           VIRTUAL_WIDTH / 2,
-          VIRTUAL_HEIGHT / 2 + 54
+          VIRTUAL_HEIGHT / 2 + 28
         );
         ctx.restore();
       }
-
-      // 8. Draw current level survival time and pace below the dog gate.
-      ctx.save();
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
-      ctx.beginPath();
-      ctx.roundRect(VIRTUAL_WIDTH / 2 - 85, 58, 170, 20, 10);
-      ctx.fill();
-
-      const progressRatio = Math.min(1, levelElapsedMsRef.current / (levelConfig.durationSeconds * 1000));
-      ctx.fillStyle = '#10b981'; // Emerald green progress fill
-      ctx.beginPath();
-      ctx.roundRect(VIRTUAL_WIDTH / 2 - 83, 60, 166 * progressRatio, 16, 8);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      const activeSpeed = Math.min(
-        MAX_SCROLL_SPEED,
-        levelConfig.scrollSpeed + progressRatio * 0.48
-      );
-      ctx.fillText(
-        `SURVIVE ${lastReportedSecondsRef.current}s • SPEED ${activeSpeed.toFixed(2)}`,
-        VIRTUAL_WIDTH / 2,
-        72
-      );
-      ctx.restore();
     };
 
     // Frame runner

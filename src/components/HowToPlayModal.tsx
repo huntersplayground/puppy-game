@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Smartphone, Keyboard, Sparkles, Heart, ShieldAlert, Github } from 'lucide-react';
+import { X, Smartphone, Keyboard, Sparkles } from 'lucide-react';
 
 interface HowToPlayModalProps {
   onClose: () => void;
@@ -13,7 +13,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose }) => {
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🐶</span>
-            <h2 className="text-lg font-extrabold text-white">How to Play & Tribute</h2>
+            <h2 className="text-lg font-extrabold text-white">How to Play</h2>
           </div>
           <button
             onClick={onClose}
@@ -26,16 +26,6 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose }) => {
 
         {/* Content */}
         <div className="overflow-y-auto space-y-4 pr-1 flex-1 text-sm text-slate-300">
-          {/* Tribute Note */}
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 text-xs space-y-1">
-            <p className="font-bold text-amber-300">
-              Tribute to NS-Shaft / 《是男人就下100层》
-            </p>
-            <p className="text-slate-300 leading-relaxed">
-              Inspired by the classic 1990s Japanese game by NAGI-P SOFT and popular 4399 web games! This cute remix has five dog-agility courses: chase balls for points, dodge obstacles, and stay below the dog gate.
-            </p>
-          </div>
-
           {/* Controls */}
           <div className="space-y-2">
             <h3 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
@@ -97,21 +87,11 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose }) => {
                 <p className="font-bold text-rose-400 flex items-center gap-1 mb-1">
                   <span>💦</span> Mud Puddles / Obstacles
                 </p>
-                <p className="text-slate-400">-1 Paw Heart if touched! Avoid or jump!</p>
+                <p className="text-slate-400">-1 Paw Heart if touched! Avoid them!</p>
               </div>
             </div>
           </div>
 
-          {/* GitHub Pages Hosting note */}
-          <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-3 text-xs space-y-1">
-            <div className="flex items-center gap-1.5 font-bold text-sky-400">
-              <Github className="w-4 h-4" />
-              <span>100% GitHub Pages & Offline Ready</span>
-            </div>
-            <p className="text-slate-400 leading-relaxed">
-              This entire app is built with pure HTML5 Canvas and synthesized Web Audio API sound effects. It runs completely standalone without any servers or external image assets—ready for instant GitHub Pages static hosting!
-            </p>
-          </div>
         </div>
 
         {/* Footer */}
@@ -120,7 +100,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose }) => {
             onClick={onClose}
             className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl transition active:scale-95 text-sm"
           >
-            Got It! Let's Catch Balls!
+            Let's Catch Balls
           </button>
         </div>
       </div>

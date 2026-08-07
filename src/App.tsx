@@ -44,20 +44,24 @@ export default function App() {
   const currentLevelRef = useRef(currentLevelNumber);
   const scoreRef = useRef(score);
   const ballsCaughtRef = useRef(ballsCaught);
+  const levelBallsCaughtRef = useRef(0);
   const timeRemainingRef = useRef(timeRemaining);
   const saveDataRef = useRef(saveData);
 
   const levelConfig = getLevelConfig(currentLevelNumber);
 
   // Reset session when starting or replaying a level
-  const restartLevel = useCallback((levelNum: number) => {
+  const restartLevel = useCallback((levelNum: number, preserveRunScore: boolean = false) => {
     currentLevelRef.current = levelNum;
-    scoreRef.current = 0;
-    ballsCaughtRef.current = 0;
+    if (!preserveRunScore) {
+      scoreRef.current = 0;
+      ballsCaughtRef.current = 0;
+      setScore(0);
+      setBallsCaught(0);
+    }
+    levelBallsCaughtRef.current = 0;
     timeRemainingRef.current = getLevelConfig(levelNum).durationSeconds;
     setCurrentLevelNumber(levelNum);
-    setScore(0);
-    setBallsCaught(0);
     setTimeRemaining(getLevelConfig(levelNum).durationSeconds);
     setHearts(maxHearts);
     setIsPaused(false);
@@ -78,6 +82,7 @@ export default function App() {
 
   const handleBallCaught = useCallback(() => {
     ballsCaughtRef.current += 1;
+    levelBallsCaughtRef.current += 1;
     setBallsCaught(ballsCaughtRef.current);
   }, []);
 
@@ -95,7 +100,7 @@ export default function App() {
         score: scoreRef.current,
         currentLevel: clearedLevel,
         floorCount: clearedConfig.durationSeconds - timeRemainingRef.current,
-        ballsCaught: ballsCaughtRef.current,
+        ballsCaught: levelBallsCaughtRef.current,
         highScore: currentSave.highScore,
         bestLevel: currentSave.bestLevel,
         totalBallsEver: currentSave.totalBallsEver,
@@ -121,7 +126,7 @@ export default function App() {
         score: scoreRef.current,
         currentLevel: currentLevelRef.current,
         floorCount: getLevelConfig(currentLevelRef.current).durationSeconds - timeRemainingRef.current,
-        ballsCaught: ballsCaughtRef.current,
+        ballsCaught: levelBallsCaughtRef.current,
         highScore: currentSave.highScore,
         bestLevel: currentSave.bestLevel,
         totalBallsEver: currentSave.totalBallsEver,
@@ -216,7 +221,7 @@ export default function App() {
           levelConfig={levelConfig}
           score={score}
           ballsCaught={ballsCaught}
-          onNextLevel={() => restartLevel(currentLevelNumber + 1)}
+          onNextLevel={() => restartLevel(currentLevelNumber + 1, true)}
           onReplayLevel={() => restartLevel(currentLevelNumber)}
         />
       )}
@@ -229,7 +234,7 @@ export default function App() {
           currentLevel={currentLevelNumber}
           highScore={saveData.highScore}
           levelConfig={levelConfig}
-          onRestart={() => restartLevel(currentLevelNumber)}
+          onRestart={() => restartLevel(1)}
         />
       )}
 

@@ -36,25 +36,22 @@ export const LevelClearModal: React.FC<LevelClearModalProps> = ({
     <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-40 select-none">
       <div className="bg-gradient-to-b from-slate-900 to-slate-800 border-2 border-emerald-500/50 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl shadow-inner">
-          {levelConfig.theme.icon}
+          🐶
         </div>
 
         <h2 className="text-2xl font-black text-white mb-1">
-          Level {levelConfig.levelNumber} Cleared!
+          Level {levelConfig.levelNumber} Cleared
         </h2>
-        <p className="text-emerald-300 text-sm font-semibold mb-4">
-          {levelConfig.name} Completed!
-        </p>
 
         {/* Stats card */}
         <div className="bg-slate-950/60 rounded-2xl p-4 border border-slate-700/60 mb-6 space-y-2.5">
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-400 flex items-center gap-1.5">
               <Trophy className="w-4 h-4 text-amber-400" />
-              Level Score
+              Run Score
             </span>
             <span className="font-mono font-bold text-white">
-              +{score.toLocaleString()} pts
+              {score.toLocaleString()} pts
             </span>
           </div>
 
@@ -68,12 +65,6 @@ export const LevelClearModal: React.FC<LevelClearModalProps> = ({
             </span>
           </div>
 
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-slate-400">Course Time</span>
-            <span className="font-mono font-bold text-emerald-400">
-              {levelConfig.durationSeconds} sec complete
-            </span>
-          </div>
         </div>
 
         {/* Actions */}

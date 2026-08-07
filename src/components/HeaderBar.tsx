@@ -109,10 +109,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           style={{ width: `${elapsedPercent}%` }}
         />
       </div>
-      <div className="flex justify-between text-[10px] text-slate-400 mt-0.5 font-mono">
-        <span>Survive: {timeRemaining}s</span>
-        <span>Speed increases through the level</span>
-      </div>
     </div>
   );
 };
