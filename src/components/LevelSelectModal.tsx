@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trophy, Lock, CheckCircle2, Sparkles, Play } from 'lucide-react';
+import { X, Trophy, Lock, Play } from 'lucide-react';
 import { LEVEL_CONFIGS } from '../lib/levels';
 
 interface LevelSelectModalProps {
@@ -24,7 +24,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg font-extrabold text-white">Select Level (1 - 5)</h2>
+            <h2 className="text-lg font-extrabold text-white">Select Level</h2>
           </div>
           <button
             onClick={onClose}
@@ -73,7 +73,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-white text-sm">
-                        Level {config.levelNumber}: {config.name}
+                        Level {config.levelNumber}
                       </span>
                       {isCurrent && (
                         <span className="text-[10px] uppercase font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full border border-amber-500/40">
@@ -81,11 +81,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
-                      {config.subtitle}
-                    </p>
                     <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400 font-mono">
-                      <span>Goal: {config.targetFloors} Floors</span>
                       {highScore > 0 && (
                         <span className="text-emerald-400 font-bold">
                           Best: {highScore.toLocaleString()}
@@ -119,7 +115,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
         {/* Footer info */}
         <div className="mt-4 pt-3 border-t border-slate-800 text-center">
           <p className="text-xs text-slate-400">
-            Clear a level to unlock the next! All 5 levels can be replayed anytime.
+            Clear a level to unlock the next. All levels can be replayed anytime.
           </p>
         </div>
       </div>

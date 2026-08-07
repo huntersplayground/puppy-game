@@ -29,7 +29,6 @@ export default function App() {
   // Controls state
   const [moveLeftPressed, setMoveLeftPressed] = useState<boolean>(false);
   const [moveRightPressed, setMoveRightPressed] = useState<boolean>(false);
-  const [tiltEnabled, setTiltEnabled] = useState<boolean>(() => getSaveData().tiltEnabled);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(() => getSaveData().soundMuted);
 
@@ -157,13 +156,6 @@ export default function App() {
     setSaveData(newSave);
   }, []);
 
-  const handleTiltToggle = useCallback((enabled: boolean) => {
-    setTiltEnabled(enabled);
-    const newSave = updateSaveData({ tiltEnabled: enabled });
-    saveDataRef.current = newSave;
-    setSaveData(newSave);
-  }, []);
-
   // Keyboard shortcut for pause / reset
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -214,12 +206,10 @@ export default function App() {
         maxHearts={maxHearts}
       />
 
-      {/* iPhone / Mobile Touch Thumb Controls at bottom */}
+      {/* Mobile touch controls */}
       <TouchControls
         onMoveLeft={(pressed) => setMoveLeftPressed(pressed)}
         onMoveRight={(pressed) => setMoveRightPressed(pressed)}
-        onTiltToggle={handleTiltToggle}
-        tiltEnabled={tiltEnabled}
       />
 
       {/* --- Modals --- */}

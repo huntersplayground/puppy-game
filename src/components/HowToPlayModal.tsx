@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Smartphone, Keyboard, Sparkles } from 'lucide-react';
+import { X, Smartphone, Keyboard } from 'lucide-react';
 
 interface HowToPlayModalProps {
   onClose: () => void;
@@ -48,7 +48,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose, onDevel
           {/* Controls */}
           <div className="space-y-2">
             <h3 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
-              Responsive Controls (iPhone & Desktop)
+              Controls
             </h3>
 
             <div className="grid grid-cols-1 gap-2 text-xs">
@@ -57,7 +57,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose, onDevel
                 <div>
                   <p className="font-bold text-white">iPhone / Mobile Touch</p>
                   <p className="text-slate-400">
-                    Use the large LEFT / RIGHT thumb buttons at the bottom. You can also tap "TILT: OFF" to enable iPhone Gyroscope tilt control!
+                    Use the large LEFT and RIGHT thumb buttons at the bottom.
                   </p>
                 </div>
               </div>
@@ -77,36 +77,50 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose, onDevel
           {/* Balls & Items */}
           <div className="space-y-2">
             <h3 className="font-bold text-white text-xs uppercase tracking-wider text-slate-400">
-              Balls to Catch & Obstacles
+              Catch and Avoid
             </h3>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/80">
                 <p className="font-bold text-amber-300 flex items-center gap-1 mb-1">
-                  <span>🎾</span> Tennis / Rubber Balls
+                  <span>🎾</span> Tennis and Rubber Balls
                 </p>
-                <p className="text-slate-400">+100 pts & +1 Ball Catch!</p>
+                <p className="text-slate-400">+100 pts</p>
               </div>
 
               <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/80">
                 <p className="font-bold text-amber-300 flex items-center gap-1 mb-1">
                   <span>⭐</span> Golden Ball
                 </p>
-                <p className="text-slate-400">+250 pts & Sparkles!</p>
+                <p className="text-slate-400">+250 pts</p>
               </div>
 
               <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/80">
                 <p className="font-bold text-rose-300 flex items-center gap-1 mb-1">
                   <span>💖</span> Pink Heart Ball
                 </p>
-                <p className="text-slate-400">+1 Paw Heart (HP recovery)</p>
+                <p className="text-slate-400">Restore 1 paw heart</p>
               </div>
 
               <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/80">
                 <p className="font-bold text-rose-400 flex items-center gap-1 mb-1">
-                  <span>💦</span> Mud Puddles / Obstacles
+                  <span>🚧</span> Gate and Obstacles
                 </p>
-                <p className="text-slate-400">-1 Paw Heart if touched! Avoid them!</p>
+                <p className="text-slate-400">Avoid the dog gate, puddles, hurdles, poles, and spikes</p>
+              </div>
+
+              <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/80">
+                <p className="font-bold text-amber-200 flex items-center gap-1 mb-1">
+                  <span>🦴</span> Bones
+                </p>
+                <p className="text-slate-400">Worth +400 pts, but puppy pauses to eat</p>
+              </div>
+
+              <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/80">
+                <p className="font-bold text-slate-200 flex items-center gap-1 mb-1">
+                  <span>🐈</span> Rival Cat
+                </p>
+                <p className="text-slate-400">The cat can steal balls and costs 1 paw heart if it bumps puppy</p>
               </div>
             </div>
           </div>
@@ -119,7 +133,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose, onDevel
             onClick={onClose}
             className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl transition active:scale-95 text-sm"
           >
-            Let's Catch Balls
+            Let’s Catch Balls
           </button>
         </div>
       </div>

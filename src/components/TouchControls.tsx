@@ -1,93 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Smartphone, SmartphoneCharging } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { sound } from '../lib/sound';
 
 interface TouchControlsProps {
   onMoveLeft: (pressed: boolean) => void;
   onMoveRight: (pressed: boolean) => void;
-  onTiltToggle: (enabled: boolean) => void;
-  tiltEnabled: boolean;
 }
 
 export const TouchControls: React.FC<TouchControlsProps> = ({
   onMoveLeft,
   onMoveRight,
-  onTiltToggle,
-  tiltEnabled,
 }) => {
   const [leftPressed, setLeftPressed] = useState(false);
   const [rightPressed, setRightPressed] = useState(false);
 
-  // Handle device orientation gyro for iPhone
-  useEffect(() => {
-    if (!tiltEnabled) return;
-
-    const handleOrientation = (e: DeviceOrientationEvent) => {
-      const gamma = e.gamma; // Left-to-Right tilt in degrees (-90 to 90)
-      if (gamma === null) return;
-
-      const threshold = 5; // degrees tilt deadzone
-      if (gamma < -threshold) {
-        onMoveLeft(true);
-        onMoveRight(false);
-        setLeftPressed(true);
-        setRightPressed(false);
-      } else if (gamma > threshold) {
-        onMoveRight(true);
-        onMoveLeft(false);
-        setRightPressed(true);
-        setLeftPressed(false);
-      } else {
-        onMoveLeft(false);
-        onMoveRight(false);
-        setLeftPressed(false);
-        setRightPressed(false);
-      }
-    };
-
-    window.addEventListener('deviceorientation', handleOrientation);
-    return () => {
-      window.removeEventListener('deviceorientation', handleOrientation);
-      onMoveLeft(false);
-      onMoveRight(false);
-    };
-  }, [tiltEnabled, onMoveLeft, onMoveRight]);
-
-  const requestGyroPermission = async () => {
-    // iOS 13+ requires explicit permission for DeviceOrientationEvent
-    sound.unlock();
-    const DOEvent = window.DeviceOrientationEvent as unknown as {
-      requestPermission?: () => Promise<'granted' | 'denied'>;
-    };
-
-    if (typeof DOEvent?.requestPermission === 'function') {
-      try {
-        const response = await DOEvent.requestPermission();
-        if (response === 'granted') {
-          onTiltToggle(!tiltEnabled);
-        } else {
-          alert('Gyroscope permission was denied. Please use the on-screen buttons to control your puppy!');
-        }
-      } catch (err) {
-        console.warn('Gyroscope permission error:', err);
-      }
-    } else {
-      // Standard browsers without permission prompt
-      onTiltToggle(!tiltEnabled);
-    }
-  };
-
   const handleLeftStart = (e: React.TouchEvent | React.PointerEvent) => {
     e.preventDefault();
     sound.unlock();
-    if (tiltEnabled) return;
     setLeftPressed(true);
     onMoveLeft(true);
   };
 
   const handleLeftEnd = (e: React.TouchEvent | React.PointerEvent) => {
     e.preventDefault();
-    if (tiltEnabled) return;
     setLeftPressed(false);
     onMoveLeft(false);
   };
@@ -95,14 +30,12 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
   const handleRightStart = (e: React.TouchEvent | React.PointerEvent) => {
     e.preventDefault();
     sound.unlock();
-    if (tiltEnabled) return;
     setRightPressed(true);
     onMoveRight(true);
   };
 
   const handleRightEnd = (e: React.TouchEvent | React.PointerEvent) => {
     e.preventDefault();
-    if (tiltEnabled) return;
     setRightPressed(false);
     onMoveRight(false);
   };
@@ -125,27 +58,6 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
       >
         <ArrowLeft className={`w-8 h-8 ${leftPressed ? 'scale-110' : ''}`} />
         <span className="hidden xs:inline">LEFT</span>
-      </button>
-
-      {/* Center Gyroscope Tilt Toggle for iPhone */}
-      <button
-        type="button"
-        onClick={requestGyroPermission}
-        className={`px-3 h-16 sm:h-20 rounded-2xl flex flex-col items-center justify-center text-xs font-semibold border transition shadow-sm ${
-          tiltEnabled
-            ? 'bg-emerald-500 text-slate-950 border-emerald-300'
-            : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-        }`}
-        title={tiltEnabled ? 'Tilt control ON (iPhone Gyro)' : 'Enable Tilt Control (iPhone Gyro)'}
-      >
-        {tiltEnabled ? (
-          <SmartphoneCharging className="w-6 h-6 mb-1 text-slate-950" />
-        ) : (
-          <Smartphone className="w-6 h-6 mb-1 text-slate-400" />
-        )}
-        <span className="text-[10px] uppercase font-mono tracking-wider">
-          {tiltEnabled ? 'Tilt: ON' : 'Tilt: OFF'}
-        </span>
       </button>
 
       {/* Right Touch Button */}

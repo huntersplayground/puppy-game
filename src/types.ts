@@ -60,8 +60,6 @@ export interface Particle {
 
 export interface LevelConfig {
   levelNumber: number; // 1 to 10
-  name: string;
-  subtitle: string;
   targetFloors: number;
   durationSeconds: number;
   scrollSpeed: number; // pixels per frame at 60fps

@@ -9,7 +9,6 @@ export interface GameSaveData {
   levelHighScores: Record<number, number>; // levelNumber -> best score
   unlockedLevels: number; // 1 to 10
   soundMuted: boolean;
-  tiltEnabled: boolean;
 }
 
 const DEFAULT_SAVE: GameSaveData = {
@@ -19,7 +18,6 @@ const DEFAULT_SAVE: GameSaveData = {
   levelHighScores: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
   unlockedLevels: 1,
   soundMuted: false,
-  tiltEnabled: false,
 };
 
 export function getSaveData(): GameSaveData {
@@ -27,9 +25,10 @@ export function getSaveData(): GameSaveData {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_SAVE };
     const parsed = JSON.parse(raw);
+    const { tiltEnabled: _removedTiltSetting, ...savedData } = parsed;
     return {
       ...DEFAULT_SAVE,
-      ...parsed,
+      ...savedData,
       levelHighScores: {
         ...DEFAULT_SAVE.levelHighScores,
         ...(parsed.levelHighScores || {}),
