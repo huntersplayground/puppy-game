@@ -11,11 +11,12 @@ export interface Platform {
   fragileTimer?: number; // starts counting down when dog lands
   isBroken?: boolean;
   bounceOffset?: number; // visual bounce animation
-  obstacleType?: 'puddle' | 'kitty' | 'hurdle' | 'weave-poles';
+  obstacleType?: 'puddle' | 'kitty' | 'hurdle' | 'weave-poles' | 'spikes';
   obstacleX?: number; // relative to platform x
   obstacleWidth?: number;
+  hazardPhase?: number;
   hasBall?: boolean;
-  ballType?: 'tennis' | 'rubber' | 'golden' | 'heart';
+  ballType?: 'tennis' | 'rubber' | 'golden' | 'heart' | 'bone';
   ballX?: number;
   ballY?: number;
   ballCaught?: boolean;
@@ -35,6 +36,7 @@ export interface DogPlayer {
   state: 'idle' | 'run' | 'fall' | 'bounce' | 'hurt' | 'happy';
   stateTimer: number;
   invincibleTimer: number;
+  munchTimer: number;
   hearts: number;
   maxHearts: number;
   tailAngle: number;
@@ -57,7 +59,7 @@ export interface Particle {
 }
 
 export interface LevelConfig {
-  levelNumber: number; // 1 to 5
+  levelNumber: number; // 1 to 10
   name: string;
   subtitle: string;
   targetFloors: number;
@@ -90,7 +92,7 @@ export interface LevelConfig {
 
 export interface GameStats {
   score: number;
-  currentLevel: number; // 1 to 5
+  currentLevel: number; // 1 to 10
   floorCount: number;
   ballsCaught: number;
   highScore: number;

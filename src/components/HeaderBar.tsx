@@ -4,6 +4,7 @@ import { LevelConfig } from '../types';
 
 interface HeaderBarProps {
   levelConfig: LevelConfig;
+  totalLevels: number;
   timeRemaining: number;
   score: number;
   ballsCaught: number;
@@ -18,6 +19,7 @@ interface HeaderBarProps {
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
   levelConfig,
+  totalLevels,
   timeRemaining,
   score,
   ballsCaught,
@@ -37,7 +39,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold px-2.5 py-1 rounded-full text-xs shadow-sm">
           <Trophy className="w-3.5 h-3.5" />
-          <span>Level {levelConfig.levelNumber}/5: {levelConfig.name}</span>
+          <span>Level {levelConfig.levelNumber}/{totalLevels}: {levelConfig.name}</span>
         </div>
 
         <div className="flex items-center gap-1">

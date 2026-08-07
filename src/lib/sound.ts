@@ -72,7 +72,7 @@ class SoundManager {
   /**
    * Ball caught chime!
    */
-  public catchBall(type: 'tennis' | 'rubber' | 'golden' | 'heart' = 'tennis') {
+  public catchBall(type: 'tennis' | 'rubber' | 'golden' | 'heart' | 'bone' = 'tennis') {
     if (this.muted) return;
     this.initContext();
     if (!this.ctx) return;
@@ -93,6 +93,9 @@ class SoundManager {
     } else if (type === 'heart') {
       freq1 = 587.33; // D5
       freq2 = 987.77; // B5
+    } else if (type === 'bone') {
+      freq1 = 493.88;
+      freq2 = 739.99;
     }
 
     osc.frequency.setValueAtTime(freq1, now);

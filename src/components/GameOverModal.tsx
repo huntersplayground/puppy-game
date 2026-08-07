@@ -64,7 +64,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         </h2>
         <p className={`text-sm font-semibold mb-4 ${isVictory ? 'text-amber-300' : 'text-slate-400'}`}>
           {isVictory
-            ? 'You guided your puppy through all five courses—what a ball-chasing champion!'
+            ? 'You guided your puppy through all ten courses—what a ball-chasing champion!'
             : `Great try on Level ${currentLevel}: ${Math.max(0, elapsedSeconds)} seconds survived!`}
         </p>
 

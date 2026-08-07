@@ -4,10 +4,10 @@ const STORAGE_KEY = 'puppy_down_game_save_v1';
 
 export interface GameSaveData {
   highScore: number;
-  bestLevel: number; // 1 to 5
+  bestLevel: number; // 1 to 10
   totalBallsEver: number;
   levelHighScores: Record<number, number>; // levelNumber -> best score
-  unlockedLevels: number; // 1 to 5
+  unlockedLevels: number; // 1 to 10
   soundMuted: boolean;
   tiltEnabled: boolean;
 }
@@ -16,7 +16,7 @@ const DEFAULT_SAVE: GameSaveData = {
   highScore: 0,
   bestLevel: 1,
   totalBallsEver: 0,
-  levelHighScores: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  levelHighScores: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
   unlockedLevels: 1,
   soundMuted: false,
   tiltEnabled: false,
@@ -57,7 +57,7 @@ export function updateSaveData(updates: Partial<GameSaveData>): GameSaveData {
 
 export function recordGameEnd(stats: GameStats, levelCleared: boolean): GameSaveData {
   const save = getSaveData();
-  const nextUnlocked = levelCleared && stats.currentLevel < 5
+  const nextUnlocked = levelCleared && stats.currentLevel < 10
     ? Math.max(save.unlockedLevels, stats.currentLevel + 1)
     : save.unlockedLevels;
 

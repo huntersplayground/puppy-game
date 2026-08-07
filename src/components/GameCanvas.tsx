@@ -30,7 +30,7 @@ const MAX_FALL_SPEED = 9.5;
 const MOVE_SPEED = 5.2;
 const CEILING_DANGER_Y = 22;
 const GATE_WARNING_Y = 105;
-const MAX_SCROLL_SPEED = 2.42;
+const MAX_SCROLL_SPEED = 3.4;
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   levelConfig,
@@ -63,6 +63,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     state: 'idle',
     stateTimer: 0,
     invincibleTimer: 0,
+    munchTimer: 0,
     hearts: hearts,
     maxHearts: maxHearts,
     tailAngle: 0,
@@ -83,6 +84,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const hasTriggeredClearRef = useRef(false);
   const introTimerRef = useRef(220);
   const gateRattleRef = useRef(0);
+  const rivalDogTimerRef = useRef(0);
+  const rivalDogStartedRef = useRef(false);
+  const rivalDogYRef = useRef(-90);
 
   // Sync prop changes to refs
   useEffect(() => {
@@ -140,10 +144,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       // Ball spawn logic
       const hasBall =
         !isStarting && Math.random() < levelConfig.ballSpawnRate + difficulty * 0.12 && type !== 'fragile';
-      let ballType: 'tennis' | 'rubber' | 'golden' | 'heart' = 'tennis';
+      let ballType: 'tennis' | 'rubber' | 'golden' | 'heart' | 'bone' = 'tennis';
       if (hasBall) {
         const rBall = Math.random();
-        if (rBall < 0.65) ballType = 'tennis';
+        if (levelConfig.levelNumber >= 6 && rBall > 0.95) ballType = 'bone';
+        else if (rBall < 0.65) ballType = 'tennis';
         else if (rBall < 0.85) ballType = 'rubber';
         else if (rBall < 0.95) ballType = 'golden';
         else ballType = 'heart';
@@ -162,12 +167,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         isBroken: false,
         bounceOffset: 0,
         obstacleType: type === 'obstacle'
-          ? (difficulty > 0.45
+          ? (levelConfig.levelNumber >= 6
+              ? (['puddle', 'kitty', 'hurdle', 'weave-poles', 'spikes'] as const)[Math.floor(Math.random() * 5)]
+              : (difficulty > 0.45
               ? (['puddle', 'kitty', 'hurdle', 'weave-poles'] as const)[Math.floor(Math.random() * 4)]
               : (['puddle', 'kitty'] as const)[Math.floor(Math.random() * 2)])
+            )
           : undefined,
         obstacleX: type === 'obstacle' ? width / 2 - 12 : undefined,
         obstacleWidth: 24,
+        hazardPhase: Math.floor(Math.random() * 120),
         hasBall,
         ballType,
         ballX: width / 2,
@@ -183,6 +192,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const initLevel = useCallback(() => {
     hasTriggeredClearRef.current = false;
     gateRattleRef.current = 0;
+    rivalDogTimerRef.current = 0;
+    rivalDogStartedRef.current = false;
+    rivalDogYRef.current = -90;
     levelElapsedMsRef.current = 0;
     lastReportedSecondsRef.current = levelConfig.durationSeconds;
     distanceTravelledRef.current = 0;
@@ -223,6 +235,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       state: 'idle',
       stateTimer: 0,
       invincibleTimer: 0,
+      munchTimer: 0,
       hearts: heartsRef.current,
       maxHearts: maxHearts,
       tailAngle: 0,
@@ -319,7 +332,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const platforms = platformsRef.current;
       const scrollSpeed = Math.min(
         MAX_SCROLL_SPEED,
-        levelConfig.scrollSpeed + (1 - secondsRemaining / levelConfig.durationSeconds) * 0.48
+        levelConfig.scrollSpeed + (1 - secondsRemaining / levelConfig.durationSeconds) * 0.7
       );
 
       // 1. Check controls (Touch buttons + Keyboard arrows)
@@ -334,7 +347,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         keysRef.current['d'] ||
         false;
 
-      if (moveLeft && !moveRight) {
+      if (player.munchTimer > 0) {
+        player.munchTimer--;
+        player.vx = 0;
+        player.state = 'happy';
+      } else if (moveLeft && !moveRight) {
         player.vx = -MOVE_SPEED;
         player.facing = 'left';
         player.state = player.isGrounded ? 'run' : 'fall';
@@ -359,6 +376,32 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       if (player.invincibleTimer > 0) {
         player.invincibleTimer--;
+      }
+
+      if (
+        levelConfig.levelNumber >= 8 &&
+        !rivalDogStartedRef.current &&
+        levelElapsedMsRef.current >= levelConfig.durationSeconds * 450
+      ) {
+        rivalDogStartedRef.current = true;
+        rivalDogTimerRef.current = 210;
+      }
+      if (rivalDogTimerRef.current > 0) {
+        rivalDogTimerRef.current--;
+        rivalDogYRef.current = -80 + (210 - rivalDogTimerRef.current) * 0.7;
+        if (player.y < rivalDogYRef.current + 72 && player.invincibleTimer === 0) {
+          player.invincibleTimer = 55;
+          player.vy = 5;
+          const newHearts = Math.max(0, player.hearts - 1);
+          player.hearts = newHearts;
+          onHeartChange(newHearts);
+          spawnParticles(player.x + player.width / 2, player.y, '#f97316', 1, 'text', 'Rival Dog! -1 HP');
+          if (newHearts === 0) {
+            sound.gameOver();
+            onGameOver();
+            return;
+          }
+        }
       }
 
       // 2. Horizontal movement & screen wrapping / borders
@@ -435,6 +478,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
             let pts = 100;
             if (p.ballType === 'golden') pts = 250;
+            else if (p.ballType === 'bone') {
+              pts = 400;
+              player.munchTimer = 36;
+            }
             else if (p.ballType === 'heart') {
               pts = 100;
               if (player.hearts < maxHearts) {
@@ -450,7 +497,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             spawnParticles(
               ballAbsX,
               ballAbsY,
-              p.ballType === 'golden'
+              p.ballType === 'bone'
+                ? '#fef3c7'
+                : p.ballType === 'golden'
                 ? '#f59e0b'
                 : p.ballType === 'heart'
                 ? '#ec4899'
@@ -464,13 +513,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               '#ffffff',
               1,
               'text',
-              `+${pts}`
+              p.ballType === 'bone' ? '+400 Munch!' : `+${pts}`
             );
           }
         }
 
         // Check obstacle collision
-        if (p.type === 'obstacle' && player.invincibleTimer === 0 && !p.isBroken) {
+        const spikesActive = p.obstacleType !== 'spikes' || ((player.stateTimer + (p.hazardPhase || 0)) % 120 >= 70);
+        if (p.type === 'obstacle' && spikesActive && player.invincibleTimer === 0 && !p.isBroken) {
           const obsX = p.x + (p.obstacleX || 0);
           const obsY = p.y - 12;
           const dist = Math.hypot(
@@ -735,6 +785,35 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
       ctx.restore();
 
+      // Late-game rival dog chase: a large pup presses down from above.
+      if (rivalDogTimerRef.current > 0) {
+        const rivalY = rivalDogYRef.current;
+        const rivalX = player.x + player.width / 2;
+        ctx.save();
+        ctx.translate(rivalX, rivalY);
+        ctx.fillStyle = '#7c2d12';
+        ctx.beginPath();
+        ctx.ellipse(0, 18, 42, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ea580c';
+        ctx.beginPath();
+        ctx.arc(18, 4, 24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fef3c7';
+        ctx.beginPath();
+        ctx.ellipse(29, 10, 13, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(34, 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('WOOF!', 0, -22);
+        ctx.restore();
+      }
+
       // 4. Draw Platforms
       for (const p of platforms) {
         if (p.isBroken) continue;
@@ -853,6 +932,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               ctx.fillRect(poleX, p.y - 14, 4, 5);
               ctx.fillRect(poleX, p.y - 4, 4, 5);
             }
+          } else if (p.obstacleType === 'spikes') {
+            const phase = (player.stateTimer + (p.hazardPhase || 0)) % 120;
+            const active = phase >= 70;
+            ctx.fillStyle = active ? '#ef4444' : '#fca5a5';
+            for (let spike = 0; spike < 4; spike++) {
+              const spikeX = obsX + spike * 7;
+              const height = active ? 16 : 5;
+              ctx.beginPath();
+              ctx.moveTo(spikeX, p.y);
+              ctx.lineTo(spikeX + 3.5, p.y - height);
+              ctx.lineTo(spikeX + 7, p.y);
+              ctx.closePath();
+              ctx.fill();
+            }
+            if (!active && phase >= 50) {
+              ctx.fillStyle = '#fef08a';
+              ctx.fillRect(obsX, p.y - 3, 28, 2);
+            }
           }
         }
 
@@ -862,7 +959,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           const by = p.y + (p.ballY || 0) + (p.ballBounceY || 0);
 
           ctx.save();
-          if (p.ballType === 'golden') {
+          if (p.ballType === 'bone') {
+            ctx.font = '18px sans-serif';
+            ctx.fillText('🦴', bx - 9, by + 6);
+          } else if (p.ballType === 'golden') {
             // Golden Trophy ball
             ctx.fillStyle = '#fbbf24';
             ctx.beginPath();

@@ -174,6 +174,7 @@ export default function App() {
       {/* Top HUD Header */}
       <HeaderBar
         levelConfig={levelConfig}
+        totalLevels={LEVEL_CONFIGS.length}
         timeRemaining={timeRemaining}
         score={score}
         ballsCaught={ballsCaught}
