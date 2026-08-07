@@ -9,6 +9,7 @@ export interface GameSaveData {
   levelHighScores: Record<number, number>; // levelNumber -> best score
   unlockedLevels: number; // 1 to 10
   soundMuted: boolean;
+  hasSeenHowToPlay: boolean;
 }
 
 const DEFAULT_SAVE: GameSaveData = {
@@ -18,6 +19,7 @@ const DEFAULT_SAVE: GameSaveData = {
   levelHighScores: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 },
   unlockedLevels: 1,
   soundMuted: false,
+  hasSeenHowToPlay: false,
 };
 
 export function getSaveData(): GameSaveData {

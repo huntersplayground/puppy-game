@@ -57,7 +57,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ onClose, onDevel
                 <div>
                   <p className="font-bold text-white">iPhone / Mobile Touch</p>
                   <p className="text-slate-400">
-                    Use the large LEFT and RIGHT thumb buttons at the bottom.
+                    Hold the left or right side of the game to steer.
                   </p>
                 </div>
               </div>

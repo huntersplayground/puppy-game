@@ -13,6 +13,8 @@ interface GameCanvasProps {
   isPaused: boolean;
   moveLeftPressed: boolean;
   moveRightPressed: boolean;
+  onTouchMoveLeft: (pressed: boolean) => void;
+  onTouchMoveRight: (pressed: boolean) => void;
   onTimeChange: (seconds: number) => void;
   onScoreChange: (deltaScore: number) => void;
   onBallCaught: () => void;
@@ -50,6 +52,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   isPaused,
   moveLeftPressed,
   moveRightPressed,
+  onTouchMoveLeft,
+  onTouchMoveRight,
   onTimeChange,
   onScoreChange,
   onBallCaught,
@@ -100,6 +104,31 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const rivalCatRef = useRef<RivalCat | null>(null);
   const rivalCatStartedRef = useRef(false);
   const rivalCatDefeatedRef = useRef(false);
+
+  const startTouchMove = (direction: 'left' | 'right', event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    sound.unlock();
+    if (direction === 'left') {
+      moveLeftPressedRef.current = true;
+      moveRightPressedRef.current = false;
+      onTouchMoveLeft(true);
+      onTouchMoveRight(false);
+    } else {
+      moveRightPressedRef.current = true;
+      moveLeftPressedRef.current = false;
+      onTouchMoveRight(true);
+      onTouchMoveLeft(false);
+    }
+  };
+
+  const stopTouchMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    moveLeftPressedRef.current = false;
+    moveRightPressedRef.current = false;
+    onTouchMoveLeft(false);
+    onTouchMoveRight(false);
+  };
 
   // Sync prop changes to refs
   useEffect(() => {
@@ -1377,17 +1406,48 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ref={containerRef}
       className="w-full flex-1 flex items-center justify-center bg-slate-950 overflow-hidden relative"
     >
-      <canvas
-        ref={canvasRef}
+      <div
+        className="relative h-full w-full"
         style={{
-          width: '100%',
-          height: '100%',
           maxWidth: `${VIRTUAL_WIDTH * 1.15}px`,
           maxHeight: `${VIRTUAL_HEIGHT}px`,
           aspectRatio: `${VIRTUAL_WIDTH} / ${VIRTUAL_HEIGHT}`,
         }}
-        className="block bg-slate-900 shadow-2xl rounded-t-xl sm:rounded-xl touch-none select-none"
-      />
+      >
+        <canvas
+          ref={canvasRef}
+          style={{ width: '100%', height: '100%' }}
+          className="block bg-slate-900 shadow-2xl rounded-t-xl sm:rounded-xl touch-none select-none"
+        />
+
+        {/* Mobile players can hold either lower side of the game itself to steer. */}
+        <div className="absolute inset-x-0 bottom-0 h-[38%] flex touch-none">
+          <button
+            type="button"
+            aria-label="Hold to move left"
+            onPointerDown={(event) => startTouchMove('left', event)}
+            onPointerUp={stopTouchMove}
+            onPointerCancel={stopTouchMove}
+            className="group flex-1 flex items-end justify-start p-4 sm:p-5 focus:outline-none"
+          >
+            <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-white/30 bg-slate-950/35 text-white/75 flex items-center justify-center text-3xl sm:text-4xl transition group-active:scale-90 group-active:bg-amber-500/70 group-active:text-slate-950">
+              ‹
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-label="Hold to move right"
+            onPointerDown={(event) => startTouchMove('right', event)}
+            onPointerUp={stopTouchMove}
+            onPointerCancel={stopTouchMove}
+            className="group flex-1 flex items-end justify-end p-4 sm:p-5 focus:outline-none"
+          >
+            <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-white/30 bg-slate-950/35 text-white/75 flex items-center justify-center text-3xl sm:text-4xl transition group-active:scale-90 group-active:bg-amber-500/70 group-active:text-slate-950">
+              ›
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

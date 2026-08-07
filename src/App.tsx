@@ -8,7 +8,6 @@ import { getLevelConfig, LEVEL_CONFIGS } from './lib/levels';
 import { sound } from './lib/sound';
 import { getSaveData, recordGameEnd, updateSaveData } from './lib/storage';
 import { HeaderBar } from './components/HeaderBar';
-import { TouchControls } from './components/TouchControls';
 import { GameCanvas } from './components/GameCanvas';
 import { LevelClearModal } from './components/LevelClearModal';
 import { GameOverModal } from './components/GameOverModal';
@@ -36,7 +35,7 @@ export default function App() {
   const [showLevelClear, setShowLevelClear] = useState<boolean>(false);
   const [showGameOver, setShowGameOver] = useState<boolean>(false);
   const [isVictory, setIsVictory] = useState<boolean>(false);
-  const [showHelp, setShowHelp] = useState<boolean>(false);
+  const [showHelp, setShowHelp] = useState<boolean>(() => !saveData.hasSeenHowToPlay);
 
   // Keep event handlers used by the animation loop stable while still giving
   // them immediate access to the latest session totals.
@@ -156,6 +155,13 @@ export default function App() {
     setSaveData(newSave);
   }, []);
 
+  const markHowToPlaySeen = useCallback(() => {
+    if (saveDataRef.current.hasSeenHowToPlay) return;
+    const newSave = updateSaveData({ hasSeenHowToPlay: true });
+    saveDataRef.current = newSave;
+    setSaveData(newSave);
+  }, []);
+
   // Keyboard shortcut for pause / reset
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -196,6 +202,8 @@ export default function App() {
         }
         moveLeftPressed={moveLeftPressed}
         moveRightPressed={moveRightPressed}
+        onTouchMoveLeft={setMoveLeftPressed}
+        onTouchMoveRight={setMoveRightPressed}
         onTimeChange={handleTimeChange}
         onScoreChange={handleScoreChange}
         onBallCaught={handleBallCaught}
@@ -204,12 +212,6 @@ export default function App() {
         onGameOver={handleGameOver}
         hearts={hearts}
         maxHearts={maxHearts}
-      />
-
-      {/* Mobile touch controls */}
-      <TouchControls
-        onMoveLeft={(pressed) => setMoveLeftPressed(pressed)}
-        onMoveRight={(pressed) => setMoveRightPressed(pressed)}
       />
 
       {/* --- Modals --- */}
@@ -242,9 +244,11 @@ export default function App() {
               ? 1
               : currentLevelRef.current + 1;
             restartLevel(nextLevel, false, true);
+            markHowToPlaySeen();
             setShowHelp(false);
           }}
           onClose={() => {
+            markHowToPlaySeen();
             setShowHelp(false);
             setIsPaused(false);
           }}
