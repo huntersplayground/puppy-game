@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Pause, Play, HelpCircle, Trophy, Sparkles, Heart, ListOrdered } from 'lucide-react';
+import { Volume2, VolumeX, Pause, Play, HelpCircle, Trophy, Sparkles, Heart, ListOrdered, RotateCcw } from 'lucide-react';
 import { LevelConfig, PlayerProfile } from '../types';
 import { AVATARS } from '../lib/leaderboard';
 
@@ -12,9 +12,11 @@ interface HeaderBarProps {
   hearts: number;
   maxHearts: number;
   isPaused: boolean;
+  isRunEnded: boolean;
   isMuted: boolean;
   playerProfile: PlayerProfile;
   onTogglePause: () => void;
+  onStartNewRun: () => void;
   onToggleMute: () => void;
   onOpenHelp: () => void;
   onOpenLeaderboard: () => void;
@@ -30,9 +32,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   hearts,
   maxHearts,
   isPaused,
+  isRunEnded,
   isMuted,
   playerProfile,
   onTogglePause,
+  onStartNewRun,
   onToggleMute,
   onOpenHelp,
   onOpenLeaderboard,
@@ -81,15 +85,26 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
           </button>
 
-          {/* Pause Button */}
-          <button
-            onClick={onTogglePause}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition active:scale-90"
-            title={isPaused ? 'Resume Game' : 'Pause Game'}
-            aria-label="Toggle Pause"
-          >
-            {isPaused ? <Play className="w-4 h-4 text-amber-400" /> : <Pause className="w-4 h-4" />}
-          </button>
+          {isRunEnded ? (
+            <button
+              onClick={onStartNewRun}
+              className="flex items-center gap-1 rounded-lg bg-emerald-500 px-2 py-1.5 text-xs font-extrabold text-slate-950 transition hover:bg-emerald-400 active:scale-90"
+              title="Start a new run"
+              aria-label="Start a new run"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>New Run</span>
+            </button>
+          ) : (
+            <button
+              onClick={onTogglePause}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition active:scale-90"
+              title={isPaused ? 'Resume Game' : 'Pause Game'}
+              aria-label="Toggle Pause"
+            >
+              {isPaused ? <Play className="w-4 h-4 text-amber-400" /> : <Pause className="w-4 h-4" />}
+            </button>
+          )}
 
           {/* Help Button */}
           <button

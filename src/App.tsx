@@ -40,6 +40,7 @@ export default function App() {
   const [showLevelClear, setShowLevelClear] = useState<boolean>(false);
   const [showGameOver, setShowGameOver] = useState<boolean>(false);
   const [isVictory, setIsVictory] = useState<boolean>(false);
+  const [isRunEnded, setIsRunEnded] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(() => !saveData.hasSeenHowToPlay);
   const [showProfile, setShowProfile] = useState<boolean>(false);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
@@ -76,6 +77,7 @@ export default function App() {
     setShowLevelClear(false);
     setShowGameOver(false);
     setIsVictory(false);
+    setIsRunEnded(false);
   }, []);
 
   const handleTimeChange = useCallback((seconds: number) => {
@@ -125,6 +127,7 @@ export default function App() {
         void submitLeaderboardScore(playerProfileRef.current, scoreRef.current, clearedLevel, ballsCaughtRef.current).catch(() => undefined);
       }
       setIsVictory(true);
+      setIsRunEnded(true);
       setShowGameOver(true);
     } else {
       setShowLevelClear(true);
@@ -154,6 +157,7 @@ export default function App() {
       void submitLeaderboardScore(playerProfileRef.current, scoreRef.current, currentLevelRef.current, ballsCaughtRef.current).catch(() => undefined);
     }
     setIsVictory(false);
+    setIsRunEnded(true);
     setShowGameOver(true);
   }, []);
 
@@ -192,9 +196,9 @@ export default function App() {
     saveDataRef.current = newSave;
     setSaveData(newSave);
     setShowProfile(false);
-    setIsPaused(false);
+    if (!isRunEnded) setIsPaused(false);
     return null;
-  }, []);
+  }, [isRunEnded]);
 
   // Keyboard shortcut for pause / reset
   useEffect(() => {
@@ -219,9 +223,11 @@ export default function App() {
         hearts={hearts}
         maxHearts={maxHearts}
         isPaused={isPaused}
+        isRunEnded={isRunEnded}
         isMuted={isMuted}
         playerProfile={playerProfile}
         onTogglePause={() => setIsPaused((prev) => !prev)}
+        onStartNewRun={() => restartLevel(1)}
         onToggleMute={handleToggleMute}
         onOpenHelp={() => {
           setIsPaused(true);
@@ -241,7 +247,7 @@ export default function App() {
       <GameCanvas
         levelConfig={levelConfig}
         isPaused={
-          isPaused || showLevelClear || showGameOver || showHelp || showProfile || showLeaderboard
+          isPaused || isRunEnded || showLevelClear || showGameOver || showHelp || showProfile || showLeaderboard
         }
         moveLeftPressed={moveLeftPressed}
         moveRightPressed={moveRightPressed}
@@ -277,6 +283,7 @@ export default function App() {
           highScore={saveData.highScore}
           levelConfig={levelConfig}
           onRestart={() => restartLevel(1)}
+          onClose={() => setShowGameOver(false)}
         />
       )}
 
@@ -293,21 +300,30 @@ export default function App() {
           onClose={() => {
             markHowToPlaySeen();
             setShowHelp(false);
-            if (playerProfileRef.current.username) {
+            if (playerProfileRef.current.username && !isRunEnded) {
               setIsPaused(false);
             } else {
-              setShowProfile(true);
+              if (!playerProfileRef.current.username) setShowProfile(true);
             }
           }}
         />
       )}
-      {showProfile && <PlayerProfileModal profile={playerProfile} onSave={handleSaveProfile} />}
+      {showProfile && (
+        <PlayerProfileModal
+          profile={playerProfile}
+          onSave={handleSaveProfile}
+          onClose={playerProfile.username ? () => {
+            setShowProfile(false);
+            if (!isRunEnded) setIsPaused(false);
+          } : undefined}
+        />
+      )}
       {showLeaderboard && (
         <LeaderboardModal
           profile={playerProfile}
           onClose={() => {
             setShowLeaderboard(false);
-            setIsPaused(false);
+            if (!isRunEnded) setIsPaused(false);
           }}
         />
       )}

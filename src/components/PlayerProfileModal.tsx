@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Check, UserRound } from 'lucide-react';
+import { Check, UserRound, X } from 'lucide-react';
 import { AVATAR_IDS, AvatarId, PlayerProfile } from '../types';
 import { AVATARS } from '../lib/leaderboard';
 
 interface PlayerProfileModalProps {
   profile: PlayerProfile;
   onSave: (username: string, avatarId: AvatarId) => Promise<string | null>;
+  onClose?: () => void;
 }
 
-export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ profile, onSave }) => {
+export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ profile, onSave, onClose }) => {
   const [username, setUsername] = useState(profile.username);
   const [avatarId, setAvatarId] = useState<AvatarId>(profile.avatarId);
   const [error, setError] = useState('');
@@ -32,12 +33,24 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ profile,
   return (
     <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 select-none">
       <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-700 rounded-3xl p-5 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center gap-2 pb-3 mb-4 border-b border-slate-800">
-          <UserRound className="w-5 h-5 text-amber-400" />
-          <div>
-            <h2 className="text-lg font-extrabold text-white">Choose Your Player</h2>
-            <p className="text-xs text-slate-400">Your name and avatar appear on the leaderboard</p>
+        <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <UserRound className="w-5 h-5 text-amber-400" />
+            <div>
+              <h2 className="text-lg font-extrabold text-white">Choose Your Player</h2>
+              <p className="text-xs text-slate-400">Your name and avatar appear on the leaderboard</p>
+            </div>
           </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full bg-slate-800 p-1.5 text-slate-400 transition hover:bg-slate-700 hover:text-white"
+              aria-label="Close player profile"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2" htmlFor="player-name">

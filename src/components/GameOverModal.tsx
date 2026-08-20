@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { RotateCcw, Trophy, Sparkles, Award } from 'lucide-react';
+import { RotateCcw, Trophy, Sparkles, Award, X } from 'lucide-react';
 import { LevelConfig } from '../types';
 
 interface GameOverModalProps {
@@ -12,6 +12,7 @@ interface GameOverModalProps {
   highScore: number;
   levelConfig: LevelConfig;
   onRestart: () => void;
+  onClose: () => void;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -23,6 +24,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   highScore,
   levelConfig,
   onRestart,
+  onClose,
 }) => {
   useEffect(() => {
     if (isVictory) {
@@ -46,8 +48,16 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
       <div
         className={`bg-gradient-to-b from-slate-900 to-slate-800 border-2 ${
           isVictory ? 'border-amber-400/80 shadow-amber-500/20' : 'border-rose-500/50 shadow-rose-500/10'
-        } rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200`}
+        } relative rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200`}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-full bg-slate-800 p-1.5 text-slate-400 transition hover:bg-slate-700 hover:text-white"
+          aria-label="Close results"
+        >
+          <X className="h-5 w-5" />
+        </button>
         {/* Icon Header */}
         <div
           className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3 text-4xl shadow-inner border-2 ${
