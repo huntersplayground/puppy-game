@@ -33,6 +33,7 @@ const MOVE_SPEED = 5.2;
 const CEILING_DANGER_Y = 22;
 const GATE_WARNING_Y = 105;
 const MAX_SCROLL_SPEED = 3.4;
+const TRAMPOLINE_LAUNCH_VELOCITY = -11;
 const RIVAL_CAT_WIDTH = 36;
 const RIVAL_CAT_HEIGHT = 32;
 
@@ -738,7 +739,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             // Apply Spring Bounce platform!
             if (p.type === 'bounce') {
               p.bounceOffset = 8;
-              player.vy = -8.5; // A useful lift without a near-guaranteed gate hit.
+              player.vy = TRAMPOLINE_LAUNCH_VELOCITY;
               player.isGrounded = false;
               player.currentPlatformId = null;
               sound.bounce(true);
@@ -781,7 +782,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       if (player.y < CEILING_DANGER_Y && player.invincibleTimer === 0) {
         sound.ouch();
         player.invincibleTimer = 50;
-        player.vy = 4; // bump down
+        // A gate hit must detach puppy from a rising platform. Otherwise the
+        // platform can carry puppy straight back into the gate once the brief
+        // invulnerability window ends.
+        player.isGrounded = false;
+        player.currentPlatformId = null;
+        player.y = CEILING_DANGER_Y + 10;
+        player.vy = 7;
         const newHearts = Math.max(0, player.hearts - 1);
         player.hearts = newHearts;
         onHeartChange(newHearts);
