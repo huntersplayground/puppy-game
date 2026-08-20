@@ -1324,17 +1324,33 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.restore();
       }
 
-      // Progress lives in the player's visual field as well as the HUD, so
-      // it can be checked without looking away from the falling puppy.
+      // The progress rail sits beside the action, matching the puppy's
+      // downward journey through the course without duplicating the HUD.
       const levelProgress = Math.max(0, Math.min(1, levelElapsedMsRef.current / (levelConfig.durationSeconds * 1000)));
-      const meterX = VIRTUAL_WIDTH - 21;
-      const meterY = VIRTUAL_HEIGHT * 0.38;
-      const meterHeight = 120;
+      const meterX = VIRTUAL_WIDTH - 19;
+      const meterY = VIRTUAL_HEIGHT * 0.32;
+      const meterWidth = 7;
+      const meterHeight = 172;
+      const markerY = meterY + 5 + (meterHeight - 10) * levelProgress;
       ctx.save();
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
-      ctx.fillRect(meterX, meterY, 5, meterHeight);
-      ctx.fillStyle = '#34d399';
-      ctx.fillRect(meterX, meterY + meterHeight * (1 - levelProgress), 5, meterHeight * levelProgress);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+      ctx.fillRect(meterX - 1, meterY - 1, meterWidth + 2, meterHeight + 2);
+      ctx.fillStyle = 'rgba(71, 85, 105, 0.58)';
+      ctx.fillRect(meterX, meterY, meterWidth, meterHeight);
+      ctx.fillStyle = '#a3e635';
+      ctx.fillRect(meterX, meterY, meterWidth, Math.max(0, markerY - meterY));
+      ctx.fillStyle = '#84cc16';
+      ctx.beginPath();
+      ctx.arc(meterX + meterWidth / 2, markerY, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(meterX + meterWidth / 2 - 1.5, markerY, 3.7, -1.05, 1.05);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(meterX + meterWidth / 2 + 1.5, markerY, 3.7, 2.1, 4.2);
+      ctx.stroke();
       ctx.restore();
 
       // 7. Smooth non-flashing Level Intro Overlay (Preparation Banner)

@@ -6,7 +6,6 @@ import { AVATARS } from '../lib/leaderboard';
 interface HeaderBarProps {
   levelConfig: LevelConfig;
   totalLevels: number;
-  timeRemaining: number;
   score: number;
   ballsCaught: number;
   hearts: number;
@@ -26,7 +25,6 @@ interface HeaderBarProps {
 export const HeaderBar: React.FC<HeaderBarProps> = ({
   levelConfig,
   totalLevels,
-  timeRemaining,
   score,
   ballsCaught,
   hearts,
@@ -42,8 +40,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenLeaderboard,
   onOpenProfile,
 }) => {
-  const elapsedPercent = Math.min(100, Math.round(((levelConfig.durationSeconds - timeRemaining) / levelConfig.durationSeconds) * 100));
-
   return (
     <div className="w-full bg-slate-900/90 backdrop-blur-md text-white px-3 py-2 border-b border-slate-700/60 shadow-lg select-none z-20">
       {/* Top Row: Level Indicator & Action Buttons */}
@@ -145,14 +141,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="font-mono font-bold text-emerald-400 bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-700">
           {score.toLocaleString()} pts
         </div>
-      </div>
-
-      {/* Progress bar towards level completion */}
-      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden border border-slate-700/50">
-        <div
-          className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-500 transition-all duration-300"
-          style={{ width: `${elapsedPercent}%` }}
-        />
       </div>
     </div>
   );
