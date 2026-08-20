@@ -778,17 +778,43 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       }
 
+      const findOrCreateSafeRecoveryPlatform = (targetY: number) => {
+        let bestPlatform: Platform | null = null;
+        for (const p of platforms) {
+          if (
+            p.isBroken ||
+            p.type !== 'normal' ||
+            p.y < 180 ||
+            p.y > VIRTUAL_HEIGHT - 120
+          ) continue;
+          if (!bestPlatform || Math.abs(p.y - targetY) < Math.abs(bestPlatform.y - targetY)) {
+            bestPlatform = p;
+          }
+        }
+
+        if (!bestPlatform) {
+          const rescuePlatform = generatePlatform(targetY, true, true);
+          rescuePlatform.x = VIRTUAL_WIDTH / 2 - rescuePlatform.width / 2;
+          platforms.push(rescuePlatform);
+          bestPlatform = rescuePlatform;
+        }
+
+        return bestPlatform;
+      };
+
       // 8. Check Ceiling Danger (top of screen soft rain cloud bumper)
       if (player.y < CEILING_DANGER_Y && player.invincibleTimer === 0) {
         sound.ouch();
-        player.invincibleTimer = 50;
-        // A gate hit must detach puppy from a rising platform. Otherwise the
-        // platform can carry puppy straight back into the gate once the brief
-        // invulnerability window ends.
-        player.isGrounded = false;
-        player.currentPlatformId = null;
-        player.y = CEILING_DANGER_Y + 10;
-        player.vy = 7;
+        const recoveryPlatform = findOrCreateSafeRecoveryPlatform(VIRTUAL_HEIGHT * 0.62);
+        // Gate hits always reset puppy to a safe part of the visible course.
+        // This prevents loops from trampolines, upward knockback, and rising
+        // platforms while still costing one heart.
+        player.x = recoveryPlatform.x + recoveryPlatform.width / 2 - player.width / 2;
+        player.y = recoveryPlatform.y - player.height;
+        player.vy = -scrollSpeed;
+        player.isGrounded = true;
+        player.currentPlatformId = recoveryPlatform.id;
+        player.invincibleTimer = 150;
         const newHearts = Math.max(0, player.hearts - 1);
         player.hearts = newHearts;
         onHeartChange(newHearts);
@@ -820,28 +846,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           return;
         }
 
-        // Forgiving rescue: use a normal, mid-shaft platform. The old
-        // highest-platform rule could respawn puppy next to the gate, causing
-        // an unavoidable chain of damage.
-        let bestPlat: Platform | null = null;
-        for (const p of platforms) {
-          if (
-            p.isBroken ||
-            p.type !== 'normal' ||
-            p.y < 180 ||
-            p.y > VIRTUAL_HEIGHT - 120
-          ) continue;
-          if (!bestPlat || Math.abs(p.y - VIRTUAL_HEIGHT * 0.55) < Math.abs(bestPlat.y - VIRTUAL_HEIGHT * 0.55)) {
-            bestPlat = p;
-          }
-        }
-
-        if (!bestPlat) {
-          const rescuePlatform = generatePlatform(VIRTUAL_HEIGHT * 0.55, true, true);
-          rescuePlatform.x = VIRTUAL_WIDTH / 2 - rescuePlatform.width / 2;
-          platforms.push(rescuePlatform);
-          bestPlat = rescuePlatform;
-        }
+        // Falling off the bottom uses the same safe platform selection.
+        const bestPlat = findOrCreateSafeRecoveryPlatform(VIRTUAL_HEIGHT * 0.55);
 
         if (bestPlat) {
           player.x = bestPlat.x + bestPlat.width / 2 - player.width / 2;
