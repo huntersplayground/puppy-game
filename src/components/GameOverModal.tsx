@@ -10,6 +10,7 @@ interface GameOverModalProps {
   elapsedSeconds: number;
   currentLevel: number;
   highScore: number;
+  isNewHighScore: boolean;
   levelConfig: LevelConfig;
   onRestart: () => void;
   onClose: () => void;
@@ -22,6 +23,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   elapsedSeconds,
   currentLevel,
   highScore,
+  isNewHighScore,
   levelConfig,
   onRestart,
   onClose,
@@ -40,8 +42,6 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
       }
     }
   }, [isVictory]);
-
-  const isNewHighScore = score >= highScore && score > 0;
 
   return (
     <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-40 select-none">

@@ -107,7 +107,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const startTouchMove = (direction: 'left' | 'right', event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId) === false) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     sound.unlock();
     if (direction === 'left') {
       moveLeftPressedRef.current = true;
@@ -150,13 +152,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Helper to generate a new platform
   const generatePlatform = useCallback(
-    (y: number, isStarting: boolean = false): Platform => {
+    (y: number, isFirstPlatform: boolean = false, isSafeStart: boolean = false): Platform => {
       const id = 'plat_' + Math.random().toString(36).substring(2, 9);
       const difficulty = Math.min(
         1,
         levelElapsedMsRef.current / Math.max(1, levelConfig.durationSeconds * 1000)
       );
-      const width = isStarting
+      const width = isFirstPlatform
         ? 140
         : Math.floor(
             levelConfig.platformWidthMin - difficulty * 20 +
@@ -165,7 +167,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const x = Math.floor(16 + Math.random() * (VIRTUAL_WIDTH - width - 32));
 
       let type: PlatformType = 'normal';
-      if (!isStarting) {
+      if (!isSafeStart) {
         const r = Math.random();
         const conveyorLeft = levelConfig.probabilities.conveyorLeft + difficulty * 0.06;
         const conveyorRight = levelConfig.probabilities.conveyorRight + difficulty * 0.06;
@@ -185,7 +187,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       // Ball spawn logic
       const hasBall =
-        !isStarting && Math.random() < levelConfig.ballSpawnRate + difficulty * 0.12 && type !== 'fragile';
+        !isFirstPlatform && Math.random() < levelConfig.ballSpawnRate + difficulty * 0.12 && type !== 'fragile';
       let ballType: 'tennis' | 'rubber' | 'golden' | 'heart' | 'bone' = 'tennis';
       if (hasBall) {
         const rBall = Math.random();
@@ -247,7 +249,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     let currentY = 130;
 
     // First platform right under puppy
-    const firstPlat = generatePlatform(currentY, true);
+    const firstPlat = generatePlatform(currentY, true, true);
     firstPlat.x = VIRTUAL_WIDTH / 2 - firstPlat.width / 2;
     initialPlats.push(firstPlat);
 
@@ -257,7 +259,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         levelConfig.gapYMin +
         Math.random() * (levelConfig.gapYMax - levelConfig.gapYMin);
       currentY += gap;
-      initialPlats.push(generatePlatform(currentY));
+      // The opening platforms are a short learning runway. They stay normal
+      // so a trampoline or hazard cannot immediately launch puppy into the gate.
+      initialPlats.push(generatePlatform(currentY, false, initialPlats.length < 5));
     }
 
     platformsRef.current = initialPlats;
@@ -372,9 +376,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       const player = playerRef.current;
       const platforms = platformsRef.current;
+      const levelProgress = 1 - secondsRemaining / levelConfig.durationSeconds;
+      const withinLevelAcceleration = Math.min(0.7, 0.25 + (levelConfig.levelNumber - 1) * 0.05);
       const scrollSpeed = Math.min(
         MAX_SCROLL_SPEED,
-        levelConfig.scrollSpeed + (1 - secondsRemaining / levelConfig.durationSeconds) * 0.7
+        levelConfig.scrollSpeed + levelProgress * withinLevelAcceleration
       );
 
       // 1. Check controls (Touch buttons + Keyboard arrows)
@@ -732,7 +738,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             // Apply Spring Bounce platform!
             if (p.type === 'bounce') {
               p.bounceOffset = 8;
-              player.vy = -12.5; // Big jump up!
+              player.vy = -8.5; // A useful lift without a near-guaranteed gate hit.
               player.isGrounded = false;
               player.currentPlatformId = null;
               sound.bounce(true);
@@ -807,13 +813,27 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           return;
         }
 
-        // Forgiving rescue: place on highest safe platform
+        // Forgiving rescue: use a normal, mid-shaft platform. The old
+        // highest-platform rule could respawn puppy next to the gate, causing
+        // an unavoidable chain of damage.
         let bestPlat: Platform | null = null;
         for (const p of platforms) {
-          if (p.isBroken || p.y < 80 || p.y > VIRTUAL_HEIGHT - 60) continue;
-          if (!bestPlat || p.y < bestPlat.y) {
+          if (
+            p.isBroken ||
+            p.type !== 'normal' ||
+            p.y < 180 ||
+            p.y > VIRTUAL_HEIGHT - 120
+          ) continue;
+          if (!bestPlat || Math.abs(p.y - VIRTUAL_HEIGHT * 0.55) < Math.abs(bestPlat.y - VIRTUAL_HEIGHT * 0.55)) {
             bestPlat = p;
           }
+        }
+
+        if (!bestPlat) {
+          const rescuePlatform = generatePlatform(VIRTUAL_HEIGHT * 0.55, true, true);
+          rescuePlatform.x = VIRTUAL_WIDTH / 2 - rescuePlatform.width / 2;
+          platforms.push(rescuePlatform);
+          bestPlat = rescuePlatform;
         }
 
         if (bestPlat) {
@@ -822,7 +842,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           player.vy = -scrollSpeed;
           player.isGrounded = true;
           player.currentPlatformId = bestPlat.id;
-          player.invincibleTimer = 60;
+          player.invincibleTimer = 150;
           spawnParticles(
             player.x + player.width / 2,
             player.y,
@@ -831,12 +851,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             'text',
             'Rescued! -1 HP (Stay on Platforms!)'
           );
-        } else {
-          // If no platform yet, place in middle
-          player.x = VIRTUAL_WIDTH / 2 - 18;
-          player.y = 100;
-          player.vy = 0;
-          player.invincibleTimer = 60;
         }
       }
 
@@ -1310,6 +1324,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.restore();
       }
 
+      // Progress lives in the player's visual field as well as the HUD, so
+      // it can be checked without looking away from the falling puppy.
+      const levelProgress = Math.max(0, Math.min(1, levelElapsedMsRef.current / (levelConfig.durationSeconds * 1000)));
+      const meterX = VIRTUAL_WIDTH - 21;
+      const meterY = VIRTUAL_HEIGHT * 0.38;
+      const meterHeight = 120;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+      ctx.fillRect(meterX, meterY, 5, meterHeight);
+      ctx.fillStyle = '#34d399';
+      ctx.fillRect(meterX, meterY + meterHeight * (1 - levelProgress), 5, meterHeight * levelProgress);
+      ctx.restore();
+
       // 7. Smooth non-flashing Level Intro Overlay (Preparation Banner)
       if (introTimerRef.current > 0) {
         ctx.save();
@@ -1427,7 +1454,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             onPointerDown={(event) => startTouchMove('left', event)}
             onPointerUp={stopTouchMove}
             onPointerCancel={stopTouchMove}
-            className="flex-1 cursor-default focus:outline-none"
+            onContextMenu={(event) => event.preventDefault()}
+            onDragStart={(event) => event.preventDefault()}
+            onSelect={(event) => event.preventDefault()}
+            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', touchAction: 'none', WebkitTapHighlightColor: 'transparent' }}
+            className="flex-1 cursor-default select-none focus:outline-none"
           />
           <button
             type="button"
@@ -1435,7 +1466,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             onPointerDown={(event) => startTouchMove('right', event)}
             onPointerUp={stopTouchMove}
             onPointerCancel={stopTouchMove}
-            className="flex-1 cursor-default focus:outline-none"
+            onContextMenu={(event) => event.preventDefault()}
+            onDragStart={(event) => event.preventDefault()}
+            onSelect={(event) => event.preventDefault()}
+            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', touchAction: 'none', WebkitTapHighlightColor: 'transparent' }}
+            className="flex-1 cursor-default select-none focus:outline-none"
           />
         </div>
       </div>

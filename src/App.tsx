@@ -41,6 +41,7 @@ export default function App() {
   const [showGameOver, setShowGameOver] = useState<boolean>(false);
   const [isVictory, setIsVictory] = useState<boolean>(false);
   const [isRunEnded, setIsRunEnded] = useState<boolean>(false);
+  const [isNewHighScore, setIsNewHighScore] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(() => !saveData.hasSeenHowToPlay);
   const [showProfile, setShowProfile] = useState<boolean>(false);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
@@ -78,6 +79,7 @@ export default function App() {
     setShowGameOver(false);
     setIsVictory(false);
     setIsRunEnded(false);
+    setIsNewHighScore(false);
   }, []);
 
   const handleTimeChange = useCallback((seconds: number) => {
@@ -104,8 +106,9 @@ export default function App() {
   const handleLevelClear = useCallback(() => {
     const clearedLevel = currentLevelRef.current;
     const clearedConfig = getLevelConfig(clearedLevel);
+    const currentSave = saveDataRef.current;
+    setIsNewHighScore(scoreRef.current > currentSave.highScore);
     if (!isDeveloperRunRef.current) {
-      const currentSave = saveDataRef.current;
       const newSave = recordGameEnd(
         {
           score: scoreRef.current,
@@ -136,8 +139,9 @@ export default function App() {
 
   // Game over handler (out of hearts)
   const handleGameOver = useCallback(() => {
+    const currentSave = saveDataRef.current;
+    setIsNewHighScore(scoreRef.current > currentSave.highScore);
     if (!isDeveloperRunRef.current) {
-      const currentSave = saveDataRef.current;
       const newSave = recordGameEnd(
         {
           score: scoreRef.current,
@@ -281,6 +285,7 @@ export default function App() {
           elapsedSeconds={levelConfig.durationSeconds - timeRemaining}
           currentLevel={currentLevelNumber}
           highScore={saveData.highScore}
+          isNewHighScore={isNewHighScore}
           levelConfig={levelConfig}
           onRestart={() => restartLevel(1)}
           onClose={() => setShowGameOver(false)}
