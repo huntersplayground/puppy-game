@@ -63,7 +63,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <img
               src={AVATARS[playerProfile.avatarId].src}
               alt={AVATARS[playerProfile.avatarId].label}
-              className="h-full w-full bg-sky-100 object-contain"
+              className="h-full w-full bg-white object-cover"
             />
           </button>
 
