@@ -14,7 +14,7 @@ export const sendJson = (res, status, data) => res.status(status).json(data);
 
 export const supabaseRequest = async (path, options = {}) => {
   const url = requiredEnv('SUPABASE_URL');
-  const serviceRoleKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const serviceRoleKey = requiredEnv('SUPABASE_SECRET_KEY');
   const response = await fetch(`${url}/rest/v1/${path}`, {
     ...options,
     headers: {
