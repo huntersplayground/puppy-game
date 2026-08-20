@@ -63,13 +63,17 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ profile,
                 type="button"
                 aria-label={AVATARS[id].label}
                 onClick={() => setAvatarId(id)}
-                className={`relative aspect-square rounded-xl text-2xl border transition ${
+                className={`relative aspect-square overflow-hidden rounded-xl border transition ${
                   selected
                     ? 'bg-amber-500/20 border-amber-400 scale-105'
                     : 'bg-slate-800 border-slate-700 hover:bg-slate-700'
                 }`}
               >
-                {AVATARS[id].emoji}
+                <img
+                  src={AVATARS[id].src}
+                  alt={AVATARS[id].label}
+                  className="h-full w-full object-cover"
+                />
                 {selected && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-amber-300" />}
               </button>
             );

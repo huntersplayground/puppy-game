@@ -52,11 +52,15 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="flex items-center gap-1">
           <button
             onClick={onOpenProfile}
-            className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-base transition active:scale-90"
+            className="w-7 h-7 overflow-hidden rounded-lg bg-slate-800 transition hover:bg-slate-700 active:scale-90"
             title="Edit Player"
             aria-label="Edit player profile"
           >
-            {AVATARS[playerProfile.avatarId].emoji}
+            <img
+              src={AVATARS[playerProfile.avatarId].src}
+              alt={AVATARS[playerProfile.avatarId].label}
+              className="h-full w-full object-cover"
+            />
           </button>
 
           <button

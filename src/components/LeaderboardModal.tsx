@@ -46,7 +46,11 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
             return (
               <div key={`${entry.rank}-${entry.username}`} className={`flex items-center gap-3 rounded-2xl border p-3 ${isCurrentPlayer ? 'bg-amber-500/10 border-amber-400/50' : 'bg-slate-800/70 border-slate-700/70'}`}>
                 <span className={`w-6 text-center font-black ${entry.rank <= 3 ? 'text-amber-300' : 'text-slate-500'}`}>{entry.rank <= 3 ? <Crown className="w-4 h-4 mx-auto" /> : entry.rank}</span>
-                <span className="text-2xl" aria-label={AVATARS[entry.avatarId].label}>{AVATARS[entry.avatarId].emoji}</span>
+                <img
+                  src={AVATARS[entry.avatarId].src}
+                  alt={AVATARS[entry.avatarId].label}
+                  className="h-9 w-9 rounded-full border border-slate-600 object-cover"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-sm text-white truncate">{entry.username}</p>
                   <p className="text-[11px] text-slate-400">Reached level {entry.levelReached}</p>
