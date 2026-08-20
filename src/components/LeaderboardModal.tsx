@@ -49,7 +49,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                 <img
                   src={AVATARS[entry.avatarId].src}
                   alt={AVATARS[entry.avatarId].label}
-                  className="h-9 w-9 rounded-full border border-slate-600 object-cover"
+                  className="h-9 w-9 rounded-full border border-slate-600 bg-sky-100 object-contain"
                 />
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-sm text-white truncate">{entry.username}</p>

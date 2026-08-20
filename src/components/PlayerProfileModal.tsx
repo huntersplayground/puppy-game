@@ -85,7 +85,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ profile,
                 <img
                   src={AVATARS[id].src}
                   alt={AVATARS[id].label}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full bg-sky-100 object-contain"
                 />
                 {selected && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-amber-300" />}
               </button>
