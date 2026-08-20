@@ -6,12 +6,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getLevelConfig, LEVEL_CONFIGS } from './lib/levels';
 import { sound } from './lib/sound';
-import { getSaveData, recordGameEnd, updateSaveData } from './lib/storage';
+import { getPlayerProfile, getSaveData, recordGameEnd, savePlayerProfile, updateSaveData } from './lib/storage';
+import { saveRemoteProfile, submitLeaderboardScore } from './lib/leaderboard';
+import { AvatarId, PlayerProfile } from './types';
 import { HeaderBar } from './components/HeaderBar';
 import { GameCanvas } from './components/GameCanvas';
 import { LevelClearModal } from './components/LevelClearModal';
 import { GameOverModal } from './components/GameOverModal';
 import { HowToPlayModal } from './components/HowToPlayModal';
+import { PlayerProfileModal } from './components/PlayerProfileModal';
+import { LeaderboardModal } from './components/LeaderboardModal';
 
 export default function App() {
   // Saved storage state
@@ -30,12 +34,15 @@ export default function App() {
   const [moveRightPressed, setMoveRightPressed] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(() => getSaveData().soundMuted);
+  const [playerProfile, setPlayerProfile] = useState<PlayerProfile>(() => getPlayerProfile());
 
   // Modals
   const [showLevelClear, setShowLevelClear] = useState<boolean>(false);
   const [showGameOver, setShowGameOver] = useState<boolean>(false);
   const [isVictory, setIsVictory] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(() => !saveData.hasSeenHowToPlay);
+  const [showProfile, setShowProfile] = useState<boolean>(false);
+  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
 
   // Keep event handlers used by the animation loop stable while still giving
   // them immediate access to the latest session totals.
@@ -46,6 +53,7 @@ export default function App() {
   const isDeveloperRunRef = useRef(false);
   const timeRemainingRef = useRef(timeRemaining);
   const saveDataRef = useRef(saveData);
+  const playerProfileRef = useRef(playerProfile);
 
   const levelConfig = getLevelConfig(currentLevelNumber);
 
@@ -113,6 +121,9 @@ export default function App() {
     }
 
     if (clearedLevel >= LEVEL_CONFIGS.length) {
+      if (!isDeveloperRunRef.current) {
+        void submitLeaderboardScore(playerProfileRef.current, scoreRef.current, clearedLevel, ballsCaughtRef.current).catch(() => undefined);
+      }
       setIsVictory(true);
       setShowGameOver(true);
     } else {
@@ -139,6 +150,9 @@ export default function App() {
       saveDataRef.current = newSave;
       setSaveData(newSave);
     }
+    if (!isDeveloperRunRef.current) {
+      void submitLeaderboardScore(playerProfileRef.current, scoreRef.current, currentLevelRef.current, ballsCaughtRef.current).catch(() => undefined);
+    }
     setIsVictory(false);
     setShowGameOver(true);
   }, []);
@@ -160,6 +174,26 @@ export default function App() {
     const newSave = updateSaveData({ hasSeenHowToPlay: true });
     saveDataRef.current = newSave;
     setSaveData(newSave);
+  }, []);
+
+  const handleSaveProfile = useCallback(async (username: string, avatarId: AvatarId): Promise<string | null> => {
+    const candidate: PlayerProfile = { ...playerProfileRef.current, username, avatarId };
+    try {
+      await saveRemoteProfile(candidate);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save your profile';
+      if (message === 'That nickname is already taken') return message;
+    }
+
+    const savedProfile = savePlayerProfile(username, avatarId);
+    playerProfileRef.current = savedProfile;
+    setPlayerProfile(savedProfile);
+    const newSave = getSaveData();
+    saveDataRef.current = newSave;
+    setSaveData(newSave);
+    setShowProfile(false);
+    setIsPaused(false);
+    return null;
   }, []);
 
   // Keyboard shortcut for pause / reset
@@ -186,11 +220,20 @@ export default function App() {
         maxHearts={maxHearts}
         isPaused={isPaused}
         isMuted={isMuted}
+        playerProfile={playerProfile}
         onTogglePause={() => setIsPaused((prev) => !prev)}
         onToggleMute={handleToggleMute}
         onOpenHelp={() => {
           setIsPaused(true);
           setShowHelp(true);
+        }}
+        onOpenLeaderboard={() => {
+          setIsPaused(true);
+          setShowLeaderboard(true);
+        }}
+        onOpenProfile={() => {
+          setIsPaused(true);
+          setShowProfile(true);
         }}
       />
 
@@ -198,7 +241,7 @@ export default function App() {
       <GameCanvas
         levelConfig={levelConfig}
         isPaused={
-          isPaused || showLevelClear || showGameOver || showHelp
+          isPaused || showLevelClear || showGameOver || showHelp || showProfile || showLeaderboard
         }
         moveLeftPressed={moveLeftPressed}
         moveRightPressed={moveRightPressed}
@@ -250,6 +293,20 @@ export default function App() {
           onClose={() => {
             markHowToPlaySeen();
             setShowHelp(false);
+            if (playerProfileRef.current.username) {
+              setIsPaused(false);
+            } else {
+              setShowProfile(true);
+            }
+          }}
+        />
+      )}
+      {showProfile && <PlayerProfileModal profile={playerProfile} onSave={handleSaveProfile} />}
+      {showLeaderboard && (
+        <LeaderboardModal
+          profile={playerProfile}
+          onClose={() => {
+            setShowLeaderboard(false);
             setIsPaused(false);
           }}
         />

@@ -98,6 +98,24 @@ export interface GameStats {
   totalBallsEver: number;
 }
 
+export const AVATAR_IDS = ['golden-pup', 'cloud-pup', 'brown-pup', 'pink-pup', 'blue-pup', 'star-pup', 'cat-pal', 'bone-pal'] as const;
+
+export type AvatarId = typeof AVATAR_IDS[number];
+
+export interface PlayerProfile {
+  browserId: string;
+  username: string;
+  avatarId: AvatarId;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  username: string;
+  avatarId: AvatarId;
+  score: number;
+  levelReached: number;
+}
+
 export type GameStateStatus =
   | 'start'
   | 'playing'

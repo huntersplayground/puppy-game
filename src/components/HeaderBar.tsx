@@ -1,6 +1,7 @@
 import React from 'react';
-import { Volume2, VolumeX, Pause, Play, HelpCircle, Trophy, Sparkles, Heart } from 'lucide-react';
-import { LevelConfig } from '../types';
+import { Volume2, VolumeX, Pause, Play, HelpCircle, Trophy, Sparkles, Heart, ListOrdered } from 'lucide-react';
+import { LevelConfig, PlayerProfile } from '../types';
+import { AVATARS } from '../lib/leaderboard';
 
 interface HeaderBarProps {
   levelConfig: LevelConfig;
@@ -12,9 +13,12 @@ interface HeaderBarProps {
   maxHearts: number;
   isPaused: boolean;
   isMuted: boolean;
+  playerProfile: PlayerProfile;
   onTogglePause: () => void;
   onToggleMute: () => void;
   onOpenHelp: () => void;
+  onOpenLeaderboard: () => void;
+  onOpenProfile: () => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -27,9 +31,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   maxHearts,
   isPaused,
   isMuted,
+  playerProfile,
   onTogglePause,
   onToggleMute,
   onOpenHelp,
+  onOpenLeaderboard,
+  onOpenProfile,
 }) => {
   const elapsedPercent = Math.min(100, Math.round(((levelConfig.durationSeconds - timeRemaining) / levelConfig.durationSeconds) * 100));
 
@@ -43,6 +50,23 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenProfile}
+            className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-base transition active:scale-90"
+            title="Edit Player"
+            aria-label="Edit player profile"
+          >
+            {AVATARS[playerProfile.avatarId].emoji}
+          </button>
+
+          <button
+            onClick={onOpenLeaderboard}
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition active:scale-90"
+            title="Leaderboard"
+            aria-label="Open leaderboard"
+          >
+            <ListOrdered className="w-4 h-4 text-amber-400" />
+          </button>
           {/* Mute Button */}
           <button
             onClick={onToggleMute}

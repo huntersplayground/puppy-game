@@ -1,4 +1,4 @@
-import { GameStats } from '../types';
+import { AvatarId, GameStats, PlayerProfile } from '../types';
 
 const STORAGE_KEY = 'puppy_down_game_save_v1';
 
@@ -10,6 +10,7 @@ export interface GameSaveData {
   unlockedLevels: number; // 1 to 10
   soundMuted: boolean;
   hasSeenHowToPlay: boolean;
+  playerProfile?: PlayerProfile;
 }
 
 const DEFAULT_SAVE: GameSaveData = {
@@ -54,6 +55,41 @@ export function updateSaveData(updates: Partial<GameSaveData>): GameSaveData {
     console.warn('Failed to write save data to localStorage:', e);
   }
   return next;
+}
+
+function createBrowserId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = character === 'x' ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
+}
+
+export function getPlayerProfile(): PlayerProfile {
+  const current = getSaveData();
+  if (current.playerProfile) return current.playerProfile;
+
+  const profile: PlayerProfile = {
+    browserId: createBrowserId(),
+    username: '',
+    avatarId: 'golden-pup',
+  };
+  updateSaveData({ playerProfile: profile });
+  return profile;
+}
+
+export function savePlayerProfile(username: string, avatarId: AvatarId): PlayerProfile {
+  const current = getPlayerProfile();
+  const profile: PlayerProfile = {
+    ...current,
+    username,
+    avatarId,
+  };
+  updateSaveData({ playerProfile: profile });
+  return profile;
 }
 
 export function recordGameEnd(stats: GameStats, levelCleared: boolean): GameSaveData {
