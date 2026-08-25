@@ -34,6 +34,8 @@ const CEILING_DANGER_Y = 22;
 const GATE_WARNING_Y = 105;
 const MAX_SCROLL_SPEED = 3.4;
 const TRAMPOLINE_LAUNCH_VELOCITY = -11;
+const DAMAGE_INVINCIBILITY_FRAMES = 60;
+const DAMAGE_HIT_STOP_FRAMES = 4;
 const RIVAL_CAT_WIDTH = 36;
 const RIVAL_CAT_HEIGHT = 32;
 
@@ -105,6 +107,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const rivalCatRef = useRef<RivalCat | null>(null);
   const rivalCatStartedRef = useRef(false);
   const rivalCatDefeatedRef = useRef(false);
+  const hitStopFramesRef = useRef(0);
 
   const startTouchMove = (direction: 'left' | 'right', event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -240,6 +243,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     rivalCatRef.current = null;
     rivalCatStartedRef.current = false;
     rivalCatDefeatedRef.current = false;
+    hitStopFramesRef.current = 0;
     levelElapsedMsRef.current = 0;
     lastReportedSecondsRef.current = levelConfig.durationSeconds;
     distanceTravelledRef.current = 0;
@@ -357,6 +361,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       if (introTimerRef.current > 0) {
         introTimerRef.current--;
         return; // Pause all game movement and scrolling while the preparation banner is shown
+      }
+
+      if (hitStopFramesRef.current > 0) {
+        hitStopFramesRef.current--;
+        return;
       }
 
       levelElapsedMsRef.current += deltaMs;
@@ -556,8 +565,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           );
           if (dist < 22) {
             sound.ouch();
-            player.invincibleTimer = 45; // ~0.75s invincibility
-            player.vy = -6;
+            player.invincibleTimer = DAMAGE_INVINCIBILITY_FRAMES;
+            player.state = 'hurt';
+            hitStopFramesRef.current = DAMAGE_HIT_STOP_FRAMES;
             const newHearts = Math.max(0, player.hearts - 1);
             player.hearts = newHearts;
             onHeartChange(newHearts);
@@ -690,8 +700,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           player.y + player.height > activeCat.y + 4 &&
           player.y + 4 < activeCat.y + RIVAL_CAT_HEIGHT;
         if (catOverlap) {
-          player.invincibleTimer = 55;
-          player.vy = -5;
+          player.invincibleTimer = DAMAGE_INVINCIBILITY_FRAMES;
+          player.state = 'hurt';
+          hitStopFramesRef.current = DAMAGE_HIT_STOP_FRAMES;
           const newHearts = Math.max(0, player.hearts - 1);
           player.hearts = newHearts;
           onHeartChange(newHearts);
@@ -818,14 +829,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         const newHearts = Math.max(0, player.hearts - 1);
         player.hearts = newHearts;
         onHeartChange(newHearts);
-        spawnParticles(
-          player.x + player.width / 2,
-          player.y + 10,
-          '#f43f5e',
-          8,
-          'text',
-          'STOP GATE! -1 HP'
-        );
         if (newHearts === 0) {
           sound.gameOver();
           onGameOver();
