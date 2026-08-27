@@ -900,6 +900,66 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
+      // Layered park scenery: it shifts slowly behind the platforms as the puppy descends.
+      const dusk = Math.max(0, (levelConfig.levelNumber - 3) / 7);
+      const parallax = (distanceTravelledRef.current * 0.12) % 90;
+      ctx.save();
+      ctx.globalAlpha = 0.18 + dusk * 0.12;
+      ctx.fillStyle = dusk > 0.5 ? '#1f3654' : '#6eaa7c';
+      ctx.beginPath();
+      ctx.moveTo(0, 300);
+      for (let x = -90 - parallax; x < VIRTUAL_WIDTH + 100; x += 90) {
+        ctx.quadraticCurveTo(x + 42, 258 + ((x / 90) % 2) * 18, x + 90, 300);
+      }
+      ctx.lineTo(VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+      ctx.lineTo(0, VIRTUAL_HEIGHT);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.globalAlpha = 0.22 + dusk * 0.16;
+      ctx.fillStyle = dusk > 0.55 ? '#17334e' : '#3f8756';
+      for (let x = -35 - (parallax * 1.7); x < VIRTUAL_WIDTH + 42; x += 64) {
+        const treeY = 350 + ((Math.floor((x + parallax) / 64) % 3) * 22);
+        ctx.fillRect(x + 26, treeY - 22, 7, 42);
+        ctx.beginPath();
+        ctx.arc(x + 29, treeY - 32, 22, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // A near fence makes the course feel like a real dog park without obscuring play.
+      ctx.globalAlpha = 0.24;
+      ctx.strokeStyle = dusk > 0.55 ? '#d9e4ed' : '#f8fafc';
+      ctx.lineWidth = 3;
+      const fenceY = 520 + (parallax * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(0, fenceY);
+      ctx.lineTo(VIRTUAL_WIDTH, fenceY);
+      ctx.moveTo(0, fenceY + 18);
+      ctx.lineTo(VIRTUAL_WIDTH, fenceY + 18);
+      for (let x = -12; x < VIRTUAL_WIDTH + 15; x += 28) {
+        ctx.moveTo(x, fenceY - 18);
+        ctx.lineTo(x, fenceY + 34);
+      }
+      ctx.stroke();
+      if (dusk > 0.35) {
+        ctx.globalAlpha = 0.5 + dusk * 0.35;
+        ctx.fillStyle = '#fff1a8';
+        for (let x = 28; x < VIRTUAL_WIDTH; x += 68) {
+          ctx.beginPath();
+          ctx.arc(x, fenceY - 6, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      if (dusk > 0.55) {
+        ctx.globalAlpha = dusk * 0.65;
+        ctx.fillStyle = '#fff7cf';
+        for (let x = 24; x < VIRTUAL_WIDTH; x += 53) {
+          const y = 90 + ((x * 17) % 180);
+          ctx.fillRect(x, y, 2, 2);
+        }
+      }
+      ctx.restore();
+
       // 2. Draw Shaft Side Walls (with subtle brick/wood pattern)
       ctx.fillStyle = levelConfig.theme.wallColor;
       ctx.fillRect(0, 0, 10, VIRTUAL_HEIGHT);
@@ -916,6 +976,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const gateShake = gateRattleRef.current * Math.sin(player.stateTimer * 0.9) * 2.5;
       ctx.save();
       ctx.translate(gateShake, 0);
+      // As the park becomes duskier, small warm gate lights preserve the exact same gate silhouette.
+      if (levelConfig.levelNumber >= 6) {
+        ctx.save();
+        ctx.fillStyle = '#fff1a8';
+        ctx.shadowColor = '#ffd56a';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(20, 15, 4, 0, Math.PI * 2);
+        ctx.arc(VIRTUAL_WIDTH - 20, 15, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
       ctx.fillStyle = '#e2e8f0';
       ctx.fillRect(11, 8, 10, 42);
       ctx.fillRect(VIRTUAL_WIDTH - 21, 8, 10, 42);
@@ -962,69 +1034,76 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         if (rivalCat.facing === 'left') ctx.scale(-1, 1);
         if (rivalCat.hurtTimer % 4 > 1) ctx.globalAlpha = 0.55;
 
-        // Tail, rounded tabby body, ears, and bright eyes mirror the approved cat concept.
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 4;
+        // The rival uses the puppy's rounded body language, with tabby colors and markings.
+        ctx.save();
+        ctx.rotate(rivalCat.state === 'happy' ? Math.sin(rivalCat.stateTimer * 0.35) * 0.08 : 0);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 3.5;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(-13, 4);
-        ctx.quadraticCurveTo(-23, -7, -18, -14);
+        ctx.moveTo(-13, 1);
+        ctx.quadraticCurveTo(-23, -4, -20, -12);
         ctx.stroke();
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#9ca3af';
         ctx.beginPath();
-        ctx.ellipse(-3, 5, 16, 10, 0, 0, Math.PI * 2);
+        ctx.roundRect(-12, -8, 24, 18, 6);
         ctx.fill();
-        ctx.strokeStyle = '#1e293b';
+        ctx.strokeStyle = '#475569';
         ctx.lineWidth = 1.8;
         ctx.stroke();
         ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
-        ctx.ellipse(5, 8, 8, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 3, 8, 5, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#6b7280';
+        ctx.fillRect(-8, 8, 5, 6);
+        ctx.fillRect(4, 8, 5, 6);
+        ctx.fillStyle = '#9ca3af';
         ctx.beginPath();
-        ctx.arc(10, -5, 11, 0, Math.PI * 2);
+        ctx.arc(6, -10, 10, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#1e293b';
+        ctx.strokeStyle = '#475569';
         ctx.stroke();
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#6b7280';
         ctx.beginPath();
-        ctx.moveTo(3, -12);
-        ctx.lineTo(4, -21);
-        ctx.lineTo(10, -14);
-        ctx.moveTo(14, -14);
-        ctx.lineTo(19, -21);
-        ctx.lineTo(20, -10);
+        ctx.moveTo(1, -16);
+        ctx.lineTo(4, -23);
+        ctx.lineTo(9, -16);
+        ctx.moveTo(12, -16);
+        ctx.lineTo(17, -23);
+        ctx.lineTo(20, -13);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = '#fda4af';
+        ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
-        ctx.arc(15, -3, 2, 0, Math.PI * 2);
+        ctx.arc(10, -8, 6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#fef08a';
+        ctx.fillStyle = '#334155';
         ctx.beginPath();
-        ctx.arc(11, -7, 2.5, 0, Math.PI * 2);
-        ctx.arc(17, -7, 2.5, 0, Math.PI * 2);
+        ctx.arc(14, -9, 2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.arc(12, -7, 1, 0, Math.PI * 2);
-        ctx.arc(18, -7, 1, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#64748b';
+        ctx.strokeStyle = '#334155';
         ctx.lineWidth = 1.5;
+        if (rivalCat.state === 'happy') {
+          ctx.beginPath();
+          ctx.arc(8, -11, 2.5, Math.PI, 0);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#334155';
+          ctx.beginPath();
+          ctx.arc(8, -11, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(7.5, -12, 1, 1);
+        }
+        ctx.strokeStyle = '#6b7280';
         for (const stripeX of [-8, -2, 4]) {
           ctx.beginPath();
-          ctx.moveTo(stripeX, -2);
-          ctx.lineTo(stripeX + 3, 5);
+          ctx.moveTo(stripeX, -3);
+          ctx.lineTo(stripeX + 3, 3);
           ctx.stroke();
         }
-        if (rivalCat.state === 'happy') {
-          ctx.fillStyle = '#fb7185';
-          ctx.font = '12px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('♥', 0, -24);
-        }
+        ctx.restore();
         ctx.restore();
       }
 
