@@ -43,6 +43,22 @@ const DAMAGE_HIT_STOP_FRAMES = 4;
 const RIVAL_CAT_WIDTH = 36;
 const RIVAL_CAT_HEIGHT = 32;
 
+type BackgroundKey = 'sunny' | 'dusk' | 'night';
+type LevelVisual = (typeof LEVEL_VISUALS)[number];
+
+const LEVEL_VISUALS: Array<{ background: BackgroundKey; tint: string; landmark: 'cloud' | 'sun' | 'sunset' | 'windows' | 'trees' | 'stars' | 'moon' | 'fireflies' | 'final-stars' | 'none' }> = [
+  { background: 'sunny', tint: 'rgba(255, 248, 206, 0.03)', landmark: 'none' },
+  { background: 'sunny', tint: 'rgba(214, 241, 255, 0.10)', landmark: 'cloud' },
+  { background: 'sunny', tint: 'rgba(255, 204, 128, 0.12)', landmark: 'sun' },
+  { background: 'dusk', tint: 'rgba(255, 157, 92, 0.10)', landmark: 'sunset' },
+  { background: 'dusk', tint: 'rgba(192, 139, 255, 0.10)', landmark: 'windows' },
+  { background: 'dusk', tint: 'rgba(74, 92, 173, 0.15)', landmark: 'trees' },
+  { background: 'night', tint: 'rgba(53, 71, 164, 0.08)', landmark: 'stars' },
+  { background: 'night', tint: 'rgba(77, 108, 188, 0.16)', landmark: 'moon' },
+  { background: 'night', tint: 'rgba(37, 32, 113, 0.20)', landmark: 'fireflies' },
+  { background: 'night', tint: 'rgba(50, 31, 111, 0.26)', landmark: 'final-stars' },
+];
+
 type RivalCat = {
   x: number;
   y: number;
@@ -112,17 +128,22 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const rivalCatStartedRef = useRef(false);
   const rivalCatDefeatedRef = useRef(false);
   const hitStopFramesRef = useRef(0);
-  const backgroundImagesRef = useRef<Record<'sunny' | 'dusk' | 'night', HTMLImageElement | null>>({
+  const backgroundImagesRef = useRef<Record<BackgroundKey, HTMLImageElement | null>>({
     sunny: null,
     dusk: null,
     night: null,
   });
   const catSpriteRef = useRef<HTMLImageElement | null>(null);
+  const previousVisualRef = useRef<LevelVisual | null>(null);
+  const backgroundTransitionRef = useRef<{ visual: LevelVisual | null; frames: number }>({
+    visual: null,
+    frames: 0,
+  });
 
   useEffect(() => {
     const backgroundSources = { sunny: parkSunny, dusk: parkDusk, night: parkNight } as const;
     for (const [key, source] of Object.entries(backgroundSources) as Array<[
-      'sunny' | 'dusk' | 'night',
+      BackgroundKey,
       string,
     ]>) {
       const image = new Image();
@@ -287,6 +308,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Initialize level platforms on mount or level change
   const initLevel = useCallback(() => {
+    const nextVisual = LEVEL_VISUALS[levelConfig.levelNumber - 1];
+    if (previousVisualRef.current && previousVisualRef.current !== nextVisual) {
+      backgroundTransitionRef.current = { visual: previousVisualRef.current, frames: 36 };
+    }
+    previousVisualRef.current = nextVisual;
     hasTriggeredClearRef.current = false;
     gateRattleRef.current = 0;
     rivalCatRef.current = null;
@@ -948,11 +974,90 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       gradient.addColorStop(1, levelConfig.theme.bgBottom);
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-      const backgroundKey = levelConfig.levelNumber <= 3 ? 'sunny' : levelConfig.levelNumber <= 6 ? 'dusk' : 'night';
-      const background = backgroundImagesRef.current[backgroundKey];
-      if (background?.complete) {
-        ctx.drawImage(background, 0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+      const levelVisual = LEVEL_VISUALS[levelConfig.levelNumber - 1];
+      const drawLevelBackground = (visual: LevelVisual, alpha: number) => {
+        const background = backgroundImagesRef.current[visual.background];
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        if (background?.complete) {
+          ctx.drawImage(background, 0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+        }
+        ctx.fillStyle = visual.tint;
+        ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+        ctx.restore();
+      };
+      const transition = backgroundTransitionRef.current;
+      if (transition.visual && transition.frames > 0) {
+        const progress = 1 - transition.frames / 36;
+        drawLevelBackground(transition.visual, 1 - progress);
+        drawLevelBackground(levelVisual, progress);
+        if (introTimerRef.current === 0) transition.frames--;
+      } else {
+        drawLevelBackground(levelVisual, 1);
       }
+
+      // One quiet landmark per level gives the course a new chapter without blocking the action.
+      ctx.save();
+      if (levelVisual.landmark === 'cloud') {
+        ctx.globalAlpha = 0.42;
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(45, 105, 15, 0, Math.PI * 2);
+        ctx.arc(61, 99, 20, 0, Math.PI * 2);
+        ctx.arc(81, 108, 13, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (levelVisual.landmark === 'sun') {
+        ctx.globalAlpha = 0.38;
+        ctx.fillStyle = '#ffd166';
+        ctx.beginPath();
+        ctx.arc(342, 102, 18, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (levelVisual.landmark === 'sunset') {
+        ctx.globalAlpha = 0.32;
+        ctx.strokeStyle = '#ffd0a1';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(20, 124);
+        ctx.quadraticCurveTo(65, 109, 110, 122);
+        ctx.moveTo(270, 145);
+        ctx.quadraticCurveTo(315, 128, 360, 142);
+        ctx.stroke();
+      } else if (levelVisual.landmark === 'windows') {
+        ctx.globalAlpha = 0.48;
+        ctx.fillStyle = '#ffe38a';
+        for (const [x, y] of [[24, 170], [41, 194], [356, 184], [338, 208]] as Array<[number, number]>) {
+          ctx.fillRect(x, y, 4, 5);
+        }
+      } else if (levelVisual.landmark === 'trees') {
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = '#17344c';
+        for (const x of [17, 42, 334, 359]) {
+          ctx.beginPath();
+          ctx.arc(x, 175 + (x % 2) * 15, 20, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (levelVisual.landmark === 'stars' || levelVisual.landmark === 'final-stars') {
+        ctx.globalAlpha = levelVisual.landmark === 'final-stars' ? 0.72 : 0.42;
+        ctx.fillStyle = '#fff6c7';
+        for (const [x, y] of [[30, 116], [64, 158], [335, 116], [352, 154]] as Array<[number, number]>) {
+          ctx.fillRect(x, y, 2, 2);
+        }
+      } else if (levelVisual.landmark === 'moon') {
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#fff4c2';
+        ctx.beginPath();
+        ctx.arc(42, 120, 14, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (levelVisual.landmark === 'fireflies') {
+        ctx.globalAlpha = 0.52;
+        ctx.fillStyle = '#d9f99d';
+        for (const [x, y] of [[24, 190], [47, 246], [351, 214], [330, 274]] as Array<[number, number]>) {
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
 
       // 2. Draw Shaft Side Walls (with subtle brick/wood pattern)
       ctx.globalAlpha = 0.38;
@@ -1473,6 +1578,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.beginPath();
         ctx.roundRect(20, VIRTUAL_HEIGHT / 2 - 56, VIRTUAL_WIDTH - 40, 112, 16);
         ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = '#fcd34d';
+        ctx.fillText(`Level ${levelConfig.levelNumber} / 10`, VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2 - 43);
 
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 20px sans-serif';
