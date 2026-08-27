@@ -7,10 +7,17 @@ import {
   PlatformType,
 } from '../types';
 import { sound } from '../lib/sound';
-import parkSunny from '../assets/game-art/park-sunny.png';
-import parkDusk from '../assets/game-art/park-dusk.png';
-import parkNight from '../assets/game-art/park-night.png';
 import tabbyCatGreenScreen from '../assets/game-art/tabby-cat-green-screen.png';
+import level01Background from '../assets/game-art/level-01.png';
+import level02Background from '../assets/game-art/level-02.png';
+import level03Background from '../assets/game-art/level-03.png';
+import level04Background from '../assets/game-art/level-04.png';
+import level05Background from '../assets/game-art/level-05.png';
+import level06Background from '../assets/game-art/level-06.png';
+import level07Background from '../assets/game-art/level-07.png';
+import level08Background from '../assets/game-art/level-08.png';
+import level09Background from '../assets/game-art/level-09.png';
+import level10Background from '../assets/game-art/level-10.png';
 
 interface GameCanvasProps {
   levelConfig: LevelConfig;
@@ -42,6 +49,18 @@ const DAMAGE_INVINCIBILITY_FRAMES = 60;
 const DAMAGE_HIT_STOP_FRAMES = 4;
 const RIVAL_CAT_WIDTH = 36;
 const RIVAL_CAT_HEIGHT = 32;
+const LEVEL_BACKGROUND_SOURCES = [
+  level01Background,
+  level02Background,
+  level03Background,
+  level04Background,
+  level05Background,
+  level06Background,
+  level07Background,
+  level08Background,
+  level09Background,
+  level10Background,
+];
 
 type RivalCat = {
   x: number;
@@ -112,25 +131,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const rivalCatStartedRef = useRef(false);
   const rivalCatDefeatedRef = useRef(false);
   const hitStopFramesRef = useRef(0);
-  const backgroundImagesRef = useRef<Record<'sunny' | 'dusk' | 'night', HTMLImageElement | null>>({
-    sunny: null,
-    dusk: null,
-    night: null,
-  });
+  const backgroundImagesRef = useRef<Array<HTMLImageElement | null>>(Array(10).fill(null));
   const catSpriteRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    const backgroundSources = { sunny: parkSunny, dusk: parkDusk, night: parkNight } as const;
-    for (const [key, source] of Object.entries(backgroundSources) as Array<[
-      'sunny' | 'dusk' | 'night',
-      string,
-    ]>) {
+    LEVEL_BACKGROUND_SOURCES.forEach((source, index) => {
       const image = new Image();
       image.src = source;
       image.onload = () => {
-        backgroundImagesRef.current[key] = image;
+        backgroundImagesRef.current[index] = image;
       };
-    }
+    });
 
     // The generator supplied a solid green backdrop, so turn it into a normal transparent sprite once.
     const source = new Image();
@@ -948,8 +959,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       gradient.addColorStop(1, levelConfig.theme.bgBottom);
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-      const backgroundKey = levelConfig.levelNumber <= 3 ? 'sunny' : levelConfig.levelNumber <= 6 ? 'dusk' : 'night';
-      const background = backgroundImagesRef.current[backgroundKey];
+      const background = backgroundImagesRef.current[levelConfig.levelNumber - 1];
       if (background?.complete) {
         ctx.drawImage(background, 0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
       }
