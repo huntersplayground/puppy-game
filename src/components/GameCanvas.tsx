@@ -7,6 +7,10 @@ import {
   PlatformType,
 } from '../types';
 import { sound } from '../lib/sound';
+import parkSunny from '../assets/game-art/park-sunny.png';
+import parkDusk from '../assets/game-art/park-dusk.png';
+import parkNight from '../assets/game-art/park-night.png';
+import tabbyCatGreenScreen from '../assets/game-art/tabby-cat-green-screen.png';
 
 interface GameCanvasProps {
   levelConfig: LevelConfig;
@@ -108,6 +112,51 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const rivalCatStartedRef = useRef(false);
   const rivalCatDefeatedRef = useRef(false);
   const hitStopFramesRef = useRef(0);
+  const backgroundImagesRef = useRef<Record<'sunny' | 'dusk' | 'night', HTMLImageElement | null>>({
+    sunny: null,
+    dusk: null,
+    night: null,
+  });
+  const catSpriteRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const backgroundSources = { sunny: parkSunny, dusk: parkDusk, night: parkNight } as const;
+    for (const [key, source] of Object.entries(backgroundSources) as Array<[
+      'sunny' | 'dusk' | 'night',
+      string,
+    ]>) {
+      const image = new Image();
+      image.src = source;
+      image.onload = () => {
+        backgroundImagesRef.current[key] = image;
+      };
+    }
+
+    // The generator supplied a solid green backdrop, so turn it into a normal transparent sprite once.
+    const source = new Image();
+    source.src = tabbyCatGreenScreen;
+    source.onload = () => {
+      const buffer = document.createElement('canvas');
+      buffer.width = source.naturalWidth;
+      buffer.height = source.naturalHeight;
+      const bufferContext = buffer.getContext('2d');
+      if (!bufferContext) return;
+      bufferContext.drawImage(source, 0, 0);
+      const pixels = bufferContext.getImageData(0, 0, buffer.width, buffer.height);
+      for (let i = 0; i < pixels.data.length; i += 4) {
+        const red = pixels.data[i];
+        const green = pixels.data[i + 1];
+        const blue = pixels.data[i + 2];
+        if (green > 140 && green > red * 1.45 && green > blue * 1.45) pixels.data[i + 3] = 0;
+      }
+      bufferContext.putImageData(pixels, 0, 0);
+      const sprite = new Image();
+      sprite.src = buffer.toDataURL('image/png');
+      sprite.onload = () => {
+        catSpriteRef.current = sprite;
+      };
+    };
+  }, []);
 
   const startTouchMove = (direction: 'left' | 'right', event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -899,71 +948,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       gradient.addColorStop(1, levelConfig.theme.bgBottom);
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-
-      // Layered park scenery: it shifts slowly behind the platforms as the puppy descends.
-      const dusk = Math.max(0, (levelConfig.levelNumber - 3) / 7);
-      const parallax = (distanceTravelledRef.current * 0.12) % 90;
-      ctx.save();
-      ctx.globalAlpha = 0.18 + dusk * 0.12;
-      ctx.fillStyle = dusk > 0.5 ? '#1f3654' : '#6eaa7c';
-      ctx.beginPath();
-      ctx.moveTo(0, 300);
-      for (let x = -90 - parallax; x < VIRTUAL_WIDTH + 100; x += 90) {
-        ctx.quadraticCurveTo(x + 42, 258 + ((x / 90) % 2) * 18, x + 90, 300);
+      const backgroundKey = levelConfig.levelNumber <= 3 ? 'sunny' : levelConfig.levelNumber <= 6 ? 'dusk' : 'night';
+      const background = backgroundImagesRef.current[backgroundKey];
+      if (background?.complete) {
+        ctx.drawImage(background, 0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
       }
-      ctx.lineTo(VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-      ctx.lineTo(0, VIRTUAL_HEIGHT);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.globalAlpha = 0.22 + dusk * 0.16;
-      ctx.fillStyle = dusk > 0.55 ? '#17334e' : '#3f8756';
-      for (let x = -35 - (parallax * 1.7); x < VIRTUAL_WIDTH + 42; x += 64) {
-        const treeY = 350 + ((Math.floor((x + parallax) / 64) % 3) * 22);
-        ctx.fillRect(x + 26, treeY - 22, 7, 42);
-        ctx.beginPath();
-        ctx.arc(x + 29, treeY - 32, 22, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // A near fence makes the course feel like a real dog park without obscuring play.
-      ctx.globalAlpha = 0.24;
-      ctx.strokeStyle = dusk > 0.55 ? '#d9e4ed' : '#f8fafc';
-      ctx.lineWidth = 3;
-      const fenceY = 520 + (parallax * 0.35);
-      ctx.beginPath();
-      ctx.moveTo(0, fenceY);
-      ctx.lineTo(VIRTUAL_WIDTH, fenceY);
-      ctx.moveTo(0, fenceY + 18);
-      ctx.lineTo(VIRTUAL_WIDTH, fenceY + 18);
-      for (let x = -12; x < VIRTUAL_WIDTH + 15; x += 28) {
-        ctx.moveTo(x, fenceY - 18);
-        ctx.lineTo(x, fenceY + 34);
-      }
-      ctx.stroke();
-      if (dusk > 0.35) {
-        ctx.globalAlpha = 0.5 + dusk * 0.35;
-        ctx.fillStyle = '#fff1a8';
-        for (let x = 28; x < VIRTUAL_WIDTH; x += 68) {
-          ctx.beginPath();
-          ctx.arc(x, fenceY - 6, 2.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      if (dusk > 0.55) {
-        ctx.globalAlpha = dusk * 0.65;
-        ctx.fillStyle = '#fff7cf';
-        for (let x = 24; x < VIRTUAL_WIDTH; x += 53) {
-          const y = 90 + ((x * 17) % 180);
-          ctx.fillRect(x, y, 2, 2);
-        }
-      }
-      ctx.restore();
 
       // 2. Draw Shaft Side Walls (with subtle brick/wood pattern)
+      ctx.globalAlpha = 0.38;
       ctx.fillStyle = levelConfig.theme.wallColor;
       ctx.fillRect(0, 0, 10, VIRTUAL_HEIGHT);
       ctx.fillRect(VIRTUAL_WIDTH - 10, 0, 10, VIRTUAL_HEIGHT);
+      ctx.globalAlpha = 1;
 
       // Decorative wall rivets
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
@@ -972,40 +968,42 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.fillRect(VIRTUAL_WIDTH - 8, y, 6, 6);
       }
 
-      // 3. Draw the rattling white dog gate at the danger boundary.
+      // 3. Draw the rattling dog gate at the danger boundary.
       const gateShake = gateRattleRef.current * Math.sin(player.stateTimer * 0.9) * 2.5;
       ctx.save();
       ctx.translate(gateShake, 0);
-      // As the park becomes duskier, small warm gate lights preserve the exact same gate silhouette.
-      if (levelConfig.levelNumber >= 6) {
-        ctx.save();
-        ctx.fillStyle = '#fff1a8';
-        ctx.shadowColor = '#ffd56a';
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.arc(20, 15, 4, 0, Math.PI * 2);
-        ctx.arc(VIRTUAL_WIDTH - 20, 15, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-      ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(11, 8, 10, 42);
-      ctx.fillRect(VIRTUAL_WIDTH - 21, 8, 10, 42);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(18, 15, VIRTUAL_WIDTH - 36, 5);
-      ctx.fillRect(18, 39, VIRTUAL_WIDTH - 36, 5);
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 1.5;
+      ctx.fillStyle = '#90b9d8';
+      ctx.beginPath();
+      ctx.roundRect(11, 7, 13, 46, 6);
+      ctx.roundRect(VIRTUAL_WIDTH - 24, 7, 13, 46, 6);
+      ctx.fill();
+      ctx.fillStyle = '#a8cae3';
+      ctx.beginPath();
+      ctx.roundRect(18, 13, VIRTUAL_WIDTH - 36, 7, 4);
+      ctx.roundRect(18, 40, VIRTUAL_WIDTH - 36, 7, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#52799c';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
       for (let x = 32; x < VIRTUAL_WIDTH - 25; x += 22) {
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#fffdf5';
         ctx.fillRect(x, 18, 8, 24);
         ctx.strokeRect(x, 18, 8, 24);
       }
-      ctx.fillStyle = '#cbd5e1';
+      ctx.fillStyle = '#769fbe';
       ctx.beginPath();
       ctx.arc(16, 8, 7, 0, Math.PI * 2);
       ctx.arc(VIRTUAL_WIDTH - 16, 8, 7, 0, Math.PI * 2);
       ctx.fill();
+      ctx.save();
+      ctx.fillStyle = '#ffd35d';
+      ctx.shadowColor = levelConfig.levelNumber >= 6 ? '#ffd56a' : 'transparent';
+      ctx.shadowBlur = levelConfig.levelNumber >= 6 ? 12 : 0;
+      ctx.beginPath();
+      ctx.arc(18, 13, 3.5, 0, Math.PI * 2);
+      ctx.arc(VIRTUAL_WIDTH - 18, 13, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
       ctx.fillStyle = '#ef4444';
       ctx.beginPath();
       for (let i = 0; i < 8; i++) {
@@ -1033,6 +1031,23 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.translate(rivalCat.x + RIVAL_CAT_WIDTH / 2, rivalCat.y + RIVAL_CAT_HEIGHT / 2);
         if (rivalCat.facing === 'left') ctx.scale(-1, 1);
         if (rivalCat.hurtTimer % 4 > 1) ctx.globalAlpha = 0.55;
+
+        const catSprite = catSpriteRef.current;
+        if (catSprite?.complete) {
+          const bounce = rivalCat.state === 'happy' ? Math.sin(rivalCat.stateTimer * 0.35) * 1.5 : 0;
+          ctx.drawImage(
+            catSprite,
+            catSprite.naturalWidth * 0.14,
+            catSprite.naturalHeight * 0.24,
+            catSprite.naturalWidth * 0.72,
+            catSprite.naturalHeight * 0.54,
+            -20,
+            -16 + bounce,
+            40,
+            32,
+          );
+          ctx.restore();
+        } else {
 
         // The rival uses the puppy's rounded body language, with tabby colors and markings.
         ctx.save();
@@ -1105,6 +1120,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
         ctx.restore();
         ctx.restore();
+        }
       }
 
       // 4. Draw Platforms
