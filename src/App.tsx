@@ -53,7 +53,10 @@ export default function App() {
   const scoreRef = useRef(score);
   const ballsCaughtRef = useRef(ballsCaught);
   const levelBallsCaughtRef = useRef(0);
+  const levelStartScoreRef = useRef(0);
+  const levelStartBallsCaughtRef = useRef(0);
   const isDeveloperRunRef = useRef(false);
+  const runFinalizedRef = useRef(false);
   const timeRemainingRef = useRef(timeRemaining);
   const saveDataRef = useRef(saveData);
   const playerProfileRef = useRef(playerProfile);
@@ -70,6 +73,8 @@ export default function App() {
       setScore(0);
       setBallsCaught(0);
     }
+    levelStartScoreRef.current = scoreRef.current;
+    levelStartBallsCaughtRef.current = ballsCaughtRef.current;
     levelBallsCaughtRef.current = 0;
     timeRemainingRef.current = getLevelConfig(levelNum).durationSeconds;
     setCurrentLevelNumber(levelNum);
@@ -81,10 +86,19 @@ export default function App() {
     setIsVictory(false);
     setIsRunEnded(false);
     setIsNewHighScore(false);
+    runFinalizedRef.current = false;
     // Replaying the current level does not change levelNum, so explicitly
     // remount the canvas to clear its completed/paused animation state.
     setGameInstanceKey((current) => current + 1);
   }, []);
+
+  const retryCurrentLevel = useCallback(() => {
+    scoreRef.current = levelStartScoreRef.current;
+    ballsCaughtRef.current = levelStartBallsCaughtRef.current;
+    setScore(levelStartScoreRef.current);
+    setBallsCaught(levelStartBallsCaughtRef.current);
+    restartLevel(currentLevelRef.current, true, isDeveloperRunRef.current);
+  }, [restartLevel]);
 
   const handleTimeChange = useCallback((seconds: number) => {
     timeRemainingRef.current = seconds;
@@ -133,6 +147,7 @@ export default function App() {
       if (!isDeveloperRunRef.current) {
         void submitLeaderboardScore(playerProfileRef.current, scoreRef.current, clearedLevel, ballsCaughtRef.current).catch(() => undefined);
       }
+      runFinalizedRef.current = true;
       setIsVictory(true);
       setIsRunEnded(true);
       setShowGameOver(true);
@@ -143,31 +158,44 @@ export default function App() {
 
   // Game over handler (out of hearts)
   const handleGameOver = useCallback(() => {
-    const currentSave = saveDataRef.current;
-    setIsNewHighScore(scoreRef.current > currentSave.highScore);
-    if (!isDeveloperRunRef.current) {
-      const newSave = recordGameEnd(
-        {
-          score: scoreRef.current,
-          currentLevel: currentLevelRef.current,
-          floorCount: getLevelConfig(currentLevelRef.current).durationSeconds - timeRemainingRef.current,
-          ballsCaught: levelBallsCaughtRef.current,
-          highScore: currentSave.highScore,
-          bestLevel: currentSave.bestLevel,
-          totalBallsEver: currentSave.totalBallsEver,
-        },
-        false
-      );
-      saveDataRef.current = newSave;
-      setSaveData(newSave);
-    }
-    if (!isDeveloperRunRef.current) {
-      void submitLeaderboardScore(playerProfileRef.current, scoreRef.current, currentLevelRef.current, ballsCaughtRef.current).catch(() => undefined);
-    }
+    setIsNewHighScore(false);
     setIsVictory(false);
     setIsRunEnded(true);
     setShowGameOver(true);
   }, []);
+
+  const finalizeFailedRun = useCallback(() => {
+    if (runFinalizedRef.current || isDeveloperRunRef.current) return;
+    const currentSave = saveDataRef.current;
+    const newSave = recordGameEnd(
+      {
+        score: scoreRef.current,
+        currentLevel: currentLevelRef.current,
+        floorCount:
+          getLevelConfig(currentLevelRef.current).durationSeconds -
+          timeRemainingRef.current,
+        ballsCaught: levelBallsCaughtRef.current,
+        highScore: currentSave.highScore,
+        bestLevel: currentSave.bestLevel,
+        totalBallsEver: currentSave.totalBallsEver,
+      },
+      false
+    );
+    saveDataRef.current = newSave;
+    setSaveData(newSave);
+    runFinalizedRef.current = true;
+    void submitLeaderboardScore(
+      playerProfileRef.current,
+      scoreRef.current,
+      currentLevelRef.current,
+      ballsCaughtRef.current
+    ).catch(() => undefined);
+  }, []);
+
+  const startNewRun = useCallback(() => {
+    if (isRunEnded && !isVictory) finalizeFailedRun();
+    restartLevel(1);
+  }, [finalizeFailedRun, isRunEnded, isVictory, restartLevel]);
 
   useEffect(() => {
     sound.setMuted(isMuted);
@@ -254,7 +282,7 @@ export default function App() {
         isMuted={isMuted}
         playerProfile={playerProfile}
         onTogglePause={() => setIsPaused((prev) => !prev)}
-        onStartNewRun={() => restartLevel(1)}
+        onStartNewRun={startNewRun}
         onToggleMute={handleToggleMute}
         onOpenHelp={() => {
           setIsPaused(true);
@@ -298,7 +326,7 @@ export default function App() {
           score={score}
           ballsCaught={ballsCaught}
           onNextLevel={() => restartLevel(currentLevelNumber + 1, true, isDeveloperRunRef.current)}
-          onReplayLevel={() => restartLevel(currentLevelNumber)}
+          onReplayLevel={retryCurrentLevel}
         />
       )}
       {showGameOver && (
@@ -311,7 +339,8 @@ export default function App() {
           highScore={saveData.highScore}
           isNewHighScore={isNewHighScore}
           levelConfig={levelConfig}
-          onRestart={() => restartLevel(1)}
+          onRetryLevel={retryCurrentLevel}
+          onRestart={startNewRun}
           onClose={() => setShowGameOver(false)}
         />
       )}

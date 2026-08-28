@@ -12,6 +12,7 @@ interface GameOverModalProps {
   highScore: number;
   isNewHighScore: boolean;
   levelConfig: LevelConfig;
+  onRetryLevel: () => void;
   onRestart: () => void;
   onClose: () => void;
 }
@@ -25,6 +26,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   highScore,
   isNewHighScore,
   levelConfig,
+  onRetryLevel,
   onRestart,
   onClose,
 }) => {
@@ -90,7 +92,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-400 flex items-center gap-1.5">
               <Trophy className="w-4 h-4 text-amber-400" />
-              Final Score
+              {isVictory ? 'Final Score' : 'Run Score'}
             </span>
             <span className="font-mono font-bold text-white">
               {score.toLocaleString()} pts
@@ -124,13 +126,34 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
         {/* Actions */}
         <div className="flex flex-col gap-2.5">
-          <button
-            onClick={onRestart}
-            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-3.5 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95 text-base"
-          >
-            <RotateCcw className="w-5 h-5" />
-            <span>{isVictory ? 'Play Again' : 'Try Again'}</span>
-          </button>
+          {isVictory ? (
+            <button
+              onClick={onRestart}
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-3.5 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95 text-base"
+            >
+              <RotateCcw className="w-5 h-5" />
+              <span>Play Again</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onRetryLevel}
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-3.5 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95 text-base"
+              >
+                <RotateCcw className="w-5 h-5" />
+                <span>Retry Level {currentLevel}</span>
+              </button>
+              <button
+                onClick={onRestart}
+                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-700 active:scale-95"
+              >
+                Start New Run
+              </button>
+              <p className="text-[11px] text-slate-500">
+                Retry restores your score from the start of this level.
+              </p>
+            </>
+          )}
 
         </div>
       </div>
