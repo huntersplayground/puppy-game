@@ -45,6 +45,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState<boolean>(() => !saveData.hasSeenHowToPlay);
   const [showProfile, setShowProfile] = useState<boolean>(false);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
+  const [gameInstanceKey, setGameInstanceKey] = useState<number>(0);
 
   // Keep event handlers used by the animation loop stable while still giving
   // them immediate access to the latest session totals.
@@ -80,6 +81,9 @@ export default function App() {
     setIsVictory(false);
     setIsRunEnded(false);
     setIsNewHighScore(false);
+    // Replaying the current level does not change levelNum, so explicitly
+    // remount the canvas to clear its completed/paused animation state.
+    setGameInstanceKey((current) => current + 1);
   }, []);
 
   const handleTimeChange = useCallback((seconds: number) => {
@@ -169,6 +173,26 @@ export default function App() {
     sound.setMuted(isMuted);
   }, [isMuted]);
 
+  useEffect(() => {
+    const preventPressCallout = (event: Event) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest('input, textarea, [contenteditable="true"]')
+      ) {
+        return;
+      }
+      event.preventDefault();
+    };
+
+    document.addEventListener('contextmenu', preventPressCallout, true);
+    document.addEventListener('selectstart', preventPressCallout, true);
+    return () => {
+      document.removeEventListener('contextmenu', preventPressCallout, true);
+      document.removeEventListener('selectstart', preventPressCallout, true);
+    };
+  }, []);
+
   const handleToggleMute = useCallback(() => {
     const muted = sound.toggleMute();
     setIsMuted(muted);
@@ -248,6 +272,7 @@ export default function App() {
 
       {/* Main Game Viewport Canvas */}
       <GameCanvas
+        key={gameInstanceKey}
         levelConfig={levelConfig}
         isPaused={
           isPaused || isRunEnded || showLevelClear || showGameOver || showHelp || showProfile || showLeaderboard
