@@ -447,7 +447,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const player = playerRef.current;
       const platforms = platformsRef.current;
       const levelProgress = 1 - secondsRemaining / levelConfig.durationSeconds;
-      const withinLevelAcceleration = Math.min(0.7, 0.25 + (levelConfig.levelNumber - 1) * 0.05);
+      const withinLevelAcceleration =
+        levelConfig.levelNumber <= 3
+          ? 0.25
+          : levelConfig.levelNumber <= 6
+            ? 0.3
+            : levelConfig.levelNumber <= 9
+              ? 0.35
+              : 0.4;
       const scrollSpeed = Math.min(
         MAX_SCROLL_SPEED,
         levelConfig.scrollSpeed + levelProgress * withinLevelAcceleration
