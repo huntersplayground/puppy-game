@@ -6,19 +6,34 @@ import { AVATARS, fetchLeaderboard } from '../lib/leaderboard';
 interface LeaderboardModalProps {
   profile: PlayerProfile;
   onClose: () => void;
+  beforeLoad?: () => Promise<void>;
 }
 
-export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onClose }) => {
+export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onClose, beforeLoad }) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLeaderboard()
-      .then(setEntries)
-      .catch((requestError: Error) => setError(requestError.message))
-      .finally(() => setLoading(false));
-  }, []);
+    let isActive = true;
+    const loadLeaderboard = async () => {
+      try {
+        await beforeLoad?.();
+        const nextEntries = await fetchLeaderboard();
+        if (isActive) setEntries(nextEntries);
+      } catch (requestError) {
+        if (isActive) {
+          setError(requestError instanceof Error ? requestError.message : 'Could not load the leaderboard');
+        }
+      } finally {
+        if (isActive) setLoading(false);
+      }
+    };
+    void loadLeaderboard();
+    return () => {
+      isActive = false;
+    };
+  }, [beforeLoad]);
 
   return (
     <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 select-none">

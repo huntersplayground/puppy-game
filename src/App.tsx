@@ -6,7 +6,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getLevelConfig, LEVEL_CONFIGS } from './lib/levels';
 import { sound } from './lib/sound';
-import { getPlayerProfile, getSaveData, recordGameEnd, savePlayerProfile, updateSaveData } from './lib/storage';
+import {
+  clearPendingLeaderboardScore,
+  getPendingLeaderboardScore,
+  getPlayerProfile,
+  getSaveData,
+  PendingLeaderboardScore,
+  recordAttemptBest,
+  recordGameEnd,
+  savePendingLeaderboardScore,
+  savePlayerProfile,
+  updateSaveData,
+} from './lib/storage';
 import { saveRemoteProfile, submitLeaderboardScore } from './lib/leaderboard';
 import { AvatarId, PlayerProfile } from './types';
 import { HeaderBar } from './components/HeaderBar';
@@ -46,6 +57,7 @@ export default function App() {
   const [showProfile, setShowProfile] = useState<boolean>(false);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
   const [gameInstanceKey, setGameInstanceKey] = useState<number>(0);
+  const [leaderboardNotice, setLeaderboardNotice] = useState<string>('');
 
   // Keep event handlers used by the animation loop stable while still giving
   // them immediate access to the latest session totals.
@@ -60,8 +72,54 @@ export default function App() {
   const timeRemainingRef = useRef(timeRemaining);
   const saveDataRef = useRef(saveData);
   const playerProfileRef = useRef(playerProfile);
+  const leaderboardNoticeTimeoutRef = useRef<number | null>(null);
 
   const levelConfig = getLevelConfig(currentLevelNumber);
+
+  const showLeaderboardNotice = useCallback((message: string) => {
+    setLeaderboardNotice(message);
+    if (leaderboardNoticeTimeoutRef.current !== null) {
+      window.clearTimeout(leaderboardNoticeTimeoutRef.current);
+    }
+    leaderboardNoticeTimeoutRef.current = window.setTimeout(() => {
+      setLeaderboardNotice('');
+      leaderboardNoticeTimeoutRef.current = null;
+    }, 5000);
+  }, []);
+
+  const syncPendingLeaderboardScore = useCallback(async (showFailureMessage = false) => {
+    const pending = getPendingLeaderboardScore();
+    const profile = playerProfileRef.current;
+    if (!pending || !profile.username) return;
+
+    try {
+      // Older versions could save a profile locally even when the server
+      // request failed. Upserting it here makes those players self-repair
+      // before their pending score is submitted.
+      await saveRemoteProfile(profile);
+      await submitLeaderboardScore(
+        profile,
+        pending.score,
+        pending.levelReached,
+        pending.ballsCaught
+      );
+      clearPendingLeaderboardScore(pending);
+    } catch {
+      if (showFailureMessage) {
+        showLeaderboardNotice('Score saved on this device. We’ll retry the leaderboard later.');
+      }
+    }
+  }, [showLeaderboardNotice]);
+
+  const submitScoreReliably = useCallback((attempt: PendingLeaderboardScore) => {
+    if (attempt.score <= 0 || isDeveloperRunRef.current) return;
+    savePendingLeaderboardScore(attempt);
+    void syncPendingLeaderboardScore(true);
+  }, [syncPendingLeaderboardScore]);
+
+  const syncBeforeLeaderboardLoad = useCallback(async () => {
+    await syncPendingLeaderboardScore(true);
+  }, [syncPendingLeaderboardScore]);
 
   // Reset session when starting or replaying a level
   const restartLevel = useCallback((levelNum: number, preserveRunScore: boolean = false, isDeveloperRun: boolean = false) => {
@@ -145,7 +203,11 @@ export default function App() {
 
     if (clearedLevel >= LEVEL_CONFIGS.length) {
       if (!isDeveloperRunRef.current) {
-        void submitLeaderboardScore(playerProfileRef.current, scoreRef.current, clearedLevel, ballsCaughtRef.current).catch(() => undefined);
+        submitScoreReliably({
+          score: scoreRef.current,
+          levelReached: clearedLevel,
+          ballsCaught: ballsCaughtRef.current,
+        });
       }
       runFinalizedRef.current = true;
       setIsVictory(true);
@@ -154,15 +216,27 @@ export default function App() {
     } else {
       setShowLevelClear(true);
     }
-  }, []);
+  }, [submitScoreReliably]);
 
   // Game over handler (out of hearts)
   const handleGameOver = useCallback(() => {
-    setIsNewHighScore(false);
+    const currentSave = saveDataRef.current;
+    const isNewBest = scoreRef.current > currentSave.highScore;
+    setIsNewHighScore(isNewBest);
+    if (!isDeveloperRunRef.current) {
+      const newSave = recordAttemptBest(scoreRef.current, currentLevelRef.current);
+      saveDataRef.current = newSave;
+      setSaveData(newSave);
+      submitScoreReliably({
+        score: scoreRef.current,
+        levelReached: currentLevelRef.current,
+        ballsCaught: ballsCaughtRef.current,
+      });
+    }
     setIsVictory(false);
     setIsRunEnded(true);
     setShowGameOver(true);
-  }, []);
+  }, [submitScoreReliably]);
 
   const finalizeFailedRun = useCallback(() => {
     if (runFinalizedRef.current || isDeveloperRunRef.current) return;
@@ -184,12 +258,6 @@ export default function App() {
     saveDataRef.current = newSave;
     setSaveData(newSave);
     runFinalizedRef.current = true;
-    void submitLeaderboardScore(
-      playerProfileRef.current,
-      scoreRef.current,
-      currentLevelRef.current,
-      ballsCaughtRef.current
-    ).catch(() => undefined);
   }, []);
 
   const startNewRun = useCallback(() => {
@@ -200,6 +268,18 @@ export default function App() {
   useEffect(() => {
     sound.setMuted(isMuted);
   }, [isMuted]);
+
+  useEffect(() => {
+    void syncPendingLeaderboardScore();
+    const handleOnline = () => void syncPendingLeaderboardScore(true);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      if (leaderboardNoticeTimeoutRef.current !== null) {
+        window.clearTimeout(leaderboardNoticeTimeoutRef.current);
+      }
+    };
+  }, [syncPendingLeaderboardScore]);
 
   useEffect(() => {
     const preventPressCallout = (event: Event) => {
@@ -243,6 +323,7 @@ export default function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Could not save your profile';
       if (message === 'That nickname is already taken') return message;
+      return 'Couldn’t connect to the leaderboard. Please try again.';
     }
 
     const savedProfile = savePlayerProfile(username, avatarId);
@@ -252,9 +333,10 @@ export default function App() {
     saveDataRef.current = newSave;
     setSaveData(newSave);
     setShowProfile(false);
+    void syncPendingLeaderboardScore(true);
     if (!isRunEnded) setIsPaused(false);
     return null;
-  }, [isRunEnded]);
+  }, [isRunEnded, syncPendingLeaderboardScore]);
 
   // Keyboard shortcut for pause / reset
   useEffect(() => {
@@ -379,11 +461,21 @@ export default function App() {
       {showLeaderboard && (
         <LeaderboardModal
           profile={playerProfile}
+          beforeLoad={syncBeforeLeaderboardLoad}
           onClose={() => {
             setShowLeaderboard(false);
             if (!isRunEnded) setIsPaused(false);
           }}
         />
+      )}
+      {leaderboardNotice && (
+        <div
+          className="absolute bottom-5 left-1/2 z-[70] w-[min(90%,24rem)] -translate-x-1/2 rounded-2xl border border-amber-400/40 bg-slate-900/95 px-4 py-3 text-center text-sm font-semibold text-amber-100 shadow-2xl backdrop-blur"
+          role="status"
+          aria-live="polite"
+        >
+          {leaderboardNotice}
+        </div>
       )}
     </div>
   );

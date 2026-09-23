@@ -11,6 +11,13 @@ export interface GameSaveData {
   soundMuted: boolean;
   hasSeenHowToPlay: boolean;
   playerProfile?: PlayerProfile;
+  pendingLeaderboardScore?: PendingLeaderboardScore;
+}
+
+export interface PendingLeaderboardScore {
+  score: number;
+  levelReached: number;
+  ballsCaught: number;
 }
 
 const DEFAULT_SAVE: GameSaveData = {
@@ -90,6 +97,56 @@ export function savePlayerProfile(username: string, avatarId: AvatarId): PlayerP
   };
   updateSaveData({ playerProfile: profile });
   return profile;
+}
+
+export function savePendingLeaderboardScore(
+  attempt: PendingLeaderboardScore
+): PendingLeaderboardScore {
+  const current = getSaveData().pendingLeaderboardScore;
+  const shouldReplace =
+    !current ||
+    attempt.score > current.score ||
+    (attempt.score === current.score && attempt.levelReached > current.levelReached) ||
+    (attempt.score === current.score &&
+      attempt.levelReached === current.levelReached &&
+      attempt.ballsCaught > current.ballsCaught);
+  const pending = shouldReplace ? attempt : current;
+  updateSaveData({ pendingLeaderboardScore: pending });
+  return pending;
+}
+
+export function getPendingLeaderboardScore(): PendingLeaderboardScore | undefined {
+  return getSaveData().pendingLeaderboardScore;
+}
+
+export function clearPendingLeaderboardScore(submitted: PendingLeaderboardScore): void {
+  const current = getSaveData().pendingLeaderboardScore;
+  if (!current) return;
+
+  // An older request must not clear a better score that was queued while it
+  // was in flight.
+  if (
+    current.score > submitted.score ||
+    (current.score === submitted.score && current.levelReached > submitted.levelReached) ||
+    (current.score === submitted.score &&
+      current.levelReached === submitted.levelReached &&
+      current.ballsCaught > submitted.ballsCaught)
+  ) {
+    return;
+  }
+  updateSaveData({ pendingLeaderboardScore: undefined });
+}
+
+export function recordAttemptBest(score: number, levelReached: number): GameSaveData {
+  const save = getSaveData();
+  return updateSaveData({
+    highScore: Math.max(save.highScore, score),
+    bestLevel: Math.max(save.bestLevel, levelReached),
+    levelHighScores: {
+      ...save.levelHighScores,
+      [levelReached]: Math.max(save.levelHighScores[levelReached] || 0, score),
+    },
+  });
 }
 
 export function recordGameEnd(stats: GameStats, levelCleared: boolean): GameSaveData {
